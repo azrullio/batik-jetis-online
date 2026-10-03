@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Petualangan Batik Jetis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Caprasimo&family=Nunito:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+<!--ISI-->
+<div class="wrap">
+  <div class="top">
+    <h1>Petualangan Batik Jetis</h1>
+    <p>Game edukasi Batik Jetis Sidoarjo dan IPA untuk sekolah dasar</p>
+  </div>
+
+  <div class="stage" id="stage">
+    <!-- LAYAR JUDUL -->
+    <div class="scr" id="scrTitle">
+      <div class="bgwrap" id="titleBg"></div>
+      <div class="title-panel" id="titlePanel"></div>
+    </div>
+
+    <!-- LAYAR ADEGAN -->
+    <div class="scr" id="scrScene" hidden>
+      <div class="bgwrap" id="bgWrap"></div>
+      <div class="actor player off" id="aPlayer"></div>
+      <div class="actor slotL off" id="aL"></div>
+      <div class="actor slotR off" id="aR"></div>
+      <div class="hud" id="sceneHud">
+        <button class="round" id="btnBack" aria-label="Kembali"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="hud-r"><span class="pill poin" id="hudPoin" hidden></span><span class="pill" id="hudProg" hidden></span><span class="loc" id="hudLoc"></span></div>
+      </div>
+      <div class="timer" id="timer" hidden><i id="timerBar"></i></div>
+      <div class="timer-lbl" id="timerLbl" hidden>Bonus kecepatan</div>
+      <button class="btn kuning skip" id="btnSkip" hidden>Lewati</button>
+      <div class="choice" id="choice" hidden></div>
+      <div class="dlg" id="dlg" hidden><span class="dlg-name" id="dlgName"></span><p id="dlgText"></p><span class="more" id="dlgMore" hidden>▼</span></div>
+    </div>
+
+    <!-- LAYAR PETA -->
+    <div class="scr" id="scrMap" hidden>
+      <div id="mapWrap" style="position:absolute;inset:0"></div>
+      <div class="hud">
+        <button class="round" id="btnHome" aria-label="Ke layar judul"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="currentColor"/></svg></button>
+        <span class="pill nama" id="mapName"></span>
+        <div class="hud-r"><span class="pill poin" id="mapPoin"></span><span class="pill rank" id="mapRank" hidden></span>
+          <button class="round piala" id="btnPapan" aria-label="Papan peringkat" hidden><svg viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M9.5 17h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="round" id="btnSet" aria-label="Pengaturan"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="16" cy="7" r="2.6" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="10" cy="17" r="2.6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></button></div>
+      </div>
+      <button class="kain-card" id="kainCard" aria-label="Lihat kain batikmu">Kain batikmu<span id="kainMini"></span></button>
+    </div>
+
+    <div class="modal-layer" id="modal" hidden><div class="card" id="card"></div></div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="koneksi" id="koneksi" hidden>Menyambung ulang…</div>
+  </div>
+
+  <div class="foot">
+    <p id="footNote">Ketuk kotak dialog atau tekan Spasi untuk melanjutkan cerita. Di HP, putar layar ke mode lanskap supaya lebih nyaman.</p>
+    <button class="ghost" id="btnFull">Layar penuh</button>
+  </div>
+</div>
+<!--/ISI-->
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/gambar.js"></script>
+<script src="js/net.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

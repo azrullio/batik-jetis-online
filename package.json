@@ -1,0 +1,25 @@
+{
+  "name": "petualangan-batik-jetis",
+  "version": "2.0.0",
+  "description": "Game edukasi Batik Jetis Sidoarjo dan IPA untuk SD, bisa dimainkan bersama dengan kode kelas dan papan peringkat langsung.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "preview": "node tools/build-preview.js",
+    "uji": "node tools/uji-bot.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}
