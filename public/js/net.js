@@ -20,6 +20,7 @@
       socket = io({ transports: ['websocket', 'polling'] });
       socket.on('papan', (l) => H.onPapan && H.onPapan(l));
       socket.on('status', (s) => H.onStatus && H.onStatus(s));
+      socket.on('kunci', (d) => H.onKunci && H.onKunci(d));
       socket.on('dikeluarkan', () => { sesi = null; tulis(null); H.onDikeluarkan && H.onDikeluarkan(); });
       socket.on('connect', async () => {
         H.onKoneksi && H.onKoneksi(true);

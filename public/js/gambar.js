@@ -365,5 +365,41 @@ const FX={
 };
 
 
-window.GB={IC,ic,anak,sekar,kilat,ACT,BG,FX,pohon,kepala,KULIT,RAMBUT,pasangDefs,gapuraMini,gapuraLapisan,GAPURA};
+
+/* ---------- gambar untuk soal (model partikel & grafik suhu) ---------- */
+const FIG={
+ partikel(){
+  const bola=(x,y,c='')=>`<circle class="${c}" cx="${x}" cy="${y}" r="13" fill="url(#figBola)" stroke="#1F5F99" stroke-width="1.2"/>`;
+  const panah=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#2A1A10" stroke-width="2" marker-end="url(#figPanah)"/>`;
+  const panel=(x,judul,isi,ket1,ket2)=>`<g transform="translate(${x} 0)"><rect x="1" y="1" width="186" height="226" rx="12" fill="#fff" stroke="#9BAF8A" stroke-width="2"/><path d="M1 13a12 12 0 0 1 12-12h162a12 12 0 0 1 12 12v23H1z" fill="#E3EFD0"/><text x="94" y="25" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="17" fill="#2A1A10">${judul}</text>${isi}<text x="94" y="196" text-anchor="middle" font-size="12" fill="#2A1A10">${ket1}</text><text x="94" y="212" text-anchor="middle" font-size="12" fill="#2A1A10">${ket2}</text></g>`;
+  let x='';for(let r=0;r<3;r++)for(let k=0;k<4;k++)x+=bola(46+k*32,72+r*32,'getar'+((r+k)%3));
+  const yb=[[40,72],[86,62],[132,58],[160,82],[64,116],[108,98],[150,128],[100,148]];
+  let y=yb.map(([a,b],i)=>bola(a,b,'geser'+(i%3))).join('')+panah(54,72,30,88)+panah(150,58,174,58)+panah(160,96,168,112)+panah(64,124,54,140)+panah(108,112,124,128)+panah(86,48,96,40);
+  const zb=[[44,86],[150,58],[110,110],[60,142],[160,140],[124,172]];
+  let z=zb.map(([a,b],i)=>bola(a,b,'bebas'+(i%3))).join('')+panah(58,78,98,52)+panah(170,124,136,98)+panah(48,142,24,142)+panah(110,124,110,140)+panah(140,172,178,162);
+  return `<svg viewBox="0 0 584 230" class="fig-partikel" role="img" aria-label="Model partikel: Zat X partikel tersusun rapat dan hanya bergetar di tempat; Zat Y partikel saling berdekatan dan dapat bergeser; Zat Z partikel berjauhan dan bergerak bebas." font-family="Nunito,'Segoe UI',sans-serif">
+  <defs><radialGradient id="figBola" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#E6F4FF"/><stop offset=".35" stop-color="#6FB6EC"/><stop offset="1" stop-color="#1F64A8"/></radialGradient>
+  <marker id="figPanah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2A1A10"/></marker></defs>
+  ${panel(0,'A. Zat X',x,'(partikel tersusun rapat dan','hanya bergetar di tempat)')}
+  ${panel(198,'B. Zat Y',y,'(partikel saling berdekatan','dan dapat bergeser)')}
+  ${panel(396,'C. Zat Z',z,'(partikel berjauhan','dan bergerak bebas)')}</svg>`;
+ },
+ grafik(){
+  const X=m=>70+m*45,Y=c=>250-(c-20)*2.6;
+  let g='';for(let m=0;m<=10;m++)g+=`<line x1="${X(m)}" y1="${Y(20)}" x2="${X(m)}" y2="${Y(100)}" stroke="#E4E4E4"/><text x="${X(m)}" y="${Y(20)+18}" text-anchor="middle" font-size="12">${m}</text>`;
+  for(let c=20;c<=100;c+=10)g+=`<line x1="${X(0)-12}" y1="${Y(c)}" x2="${X(10)+12}" y2="${Y(c)}" stroke="#E4E4E4"/><text x="${X(0)-18}" y="${Y(c)+4}" text-anchor="end" font-size="12">${c}</text>`;
+  const T=[[0,30],[2,55],[4,70],[8,70],[10,85]];
+  const garis=T.map(([m,c],i)=>(i?'L':'M')+X(m)+' '+Y(c)).join('');
+  const titik=T.map(([m,c],i)=>`<circle cx="${X(m)}" cy="${Y(c)}" r="5" fill="#1F77B4"/><text x="${X(m)+(i===0?8:i===T.length-1?-4:0)}" y="${Y(c)-11}" text-anchor="${i===0?'start':i===T.length-1?'end':'middle'}" font-size="11">(${m}, ${c}°C)</text>`).join('');
+  return `<svg viewBox="0 0 560 300" class="fig-grafik" role="img" aria-label="Grafik suhu malam terhadap waktu: menit 0 suhu 30°C, menit 2 suhu 55°C, menit 4 suhu 70°C, menit 8 suhu 70°C, menit 10 suhu 85°C." font-family="Nunito,'Segoe UI',sans-serif" fill="#2A1A10">
+  <rect width="560" height="300" fill="#fff"/>
+  <text x="${X(5)}" y="20" text-anchor="middle" font-size="14" font-weight="800">Grafik Perubahan Suhu Malam Selama Proses Pemanasan</text>
+  ${g}<rect x="${X(0)-12}" y="${Y(100)}" width="${X(10)-X(0)+24}" height="${Y(20)-Y(100)}" fill="none" stroke="#2A1A10" stroke-width="1.2"/>
+  <path d="${garis}" fill="none" stroke="#1F77B4" stroke-width="3" stroke-linejoin="round"/>${titik}
+  <text x="${X(5)}" y="292" text-anchor="middle" font-size="13">Waktu (menit)</text>
+  <text transform="translate(18 ${Y(60)}) rotate(-90)" text-anchor="middle" font-size="13">Suhu (°C)</text></svg>`;
+ },
+};
+
+window.GB={IC,ic,anak,sekar,kilat,ACT,BG,FX,FIG,pohon,kepala,KULIT,RAMBUT,pasangDefs,gapuraMini,gapuraLapisan,GAPURA};
 })();

@@ -1,13 +1,21 @@
 # Petualangan Batik Jetis (versi online)
 
-Game edukasi Batik Jetis Sidoarjo dan IPA untuk sekolah dasar. Siswa bermain bersama dengan **kode kelas 6 angka**, **link**, atau **QR**, seperti Quizizz. Setiap jawaban langsung dinilai server dan masuk ke **papan peringkat** dari skor tertinggi sampai terendah.
+Game edukasi IPA SMP kelas VII bertema Batik Jetis Sidoarjo. Siswa bermain bersama dengan **kode kelas 6 angka**, **link**, atau **QR**, seperti Quizizz. Materinya dibagi menjadi **3 pertemuan** berisi 10 soal pilihan ganda dari instrumen latihan soal gamifikasi:
+
+| Pertemuan | Materi | Ranah |
+|---|---|---|
+| 1 | Wujud Zat & Model Partikel | C1–C2 (LOTS) |
+| 2 | Perubahan Wujud Zat | C3–C4 |
+| 3 | Perubahan Fisika dan Kimia | C5–C6 (HOTS) |
+
+Pertemuan 1 langsung terbuka. **Pertemuan 2 dan 3 dikunci** dan hanya bisa dibuka guru dari dasbor, berlaku untuk semua siswa yang memakai kode kelas itu. Setiap jawaban dinilai server dan masuk ke **papan peringkat**.
 
 ## Isi proyek
 
 ```
 server.js              Server: kelas, kode, skor, papan peringkat (Express + Socket.IO)
 shared/konten.js       Cerita, soal, dan KUNCI JAWABAN (hanya dibaca server)
-shared/skor.js         Aturan poin ala Quizizz
+shared/skor.js         Aturan nilai (benar = 10 poin, satu kali menjawab)
 public/index.html      Halaman pemain (siswa)
 public/guru.html       Dasbor guru
 public/js/gambar.js    Semua gambar & animasi (SVG), termasuk gapura Kampoeng Batik Jetis
@@ -35,40 +43,42 @@ Supaya siswa di jaringan Wi-Fi yang sama bisa ikut, buka alamat IP komputer guru
 
 ## Cara bermain di kelas
 
-1. Guru membuka **dasbor guru**, mengisi nama kelas, memilih misi yang dimainkan, lalu menekan **Buat kelas**.
+1. Guru membuka **dasbor guru**, mengisi nama kelas, lalu menekan **Buat kelas**.
 2. Kode 6 angka dan QR muncul besar di layar. Tampilkan di proyektor.
 3. Siswa membuka halaman pemain, memasukkan kode, menulis nama, dan memilih avatar. Mereka menunggu di lobi.
-4. Guru menekan **Mulai permainan**. Semua siswa mulai dari prolog, lalu bermain dengan kecepatan masing-masing.
-5. Dasbor menampilkan papan peringkat langsung: podium 3 besar, skor, persentase benar di percobaan pertama, progres, misi selesai, dan status online. Tiga skor terendah ditandai **Perlu dibantu**.
-6. Panel **Soal tersulit** mengurutkan soal dari yang paling sering salah, untuk bahan pembahasan.
-7. Guru menekan **Akhiri permainan**. Siswa langsung melihat hasil akhir dan peringkatnya. Tekan **Unduh hasil (CSV)** untuk membuka nilai di Excel.
+4. Guru menekan **Mulai**. Siswa melihat prolog, masuk lewat gapura, lalu mengerjakan **Pertemuan 1**.
+5. Setelah 10 soal selesai, siswa langsung melihat **nilainya** (0–100), bintang, dan rekap soal yang benar/salah. Pertemuan 2 tampil terkunci.
+6. Di pelajaran berikutnya, guru menekan **Buka Pertemuan 2** di panel *Kunci pertemuan*. Siswa yang sedang online langsung mendapat pemberitahuan, dan peta mereka ikut terbuka. Lakukan hal yang sama untuk Pertemuan 3. Tombol **Kunci lagi** menutupnya kembali.
+7. Siswa masuk lagi dengan **kode dan nama yang sama**. Bila memakai perangkat lain, game bertanya "Apakah itu kamu?" supaya siswa bisa melanjutkan nilainya, atau memakai nama baru bila ternyata siswa lain bernama sama.
+8. Dasbor menampilkan papan peringkat langsung (nilai P1, P2, P3, skor total), **Soal tersulit**, dan **Analisis butir soal** lengkap dengan sebaran pilihan A–D.
+9. Tekan **Unduh hasil (CSV)** untuk membuka nilai di Excel. **Tutup kelas** menghentikan semua jawaban, dan **Buka kelas lagi** membukanya kembali.
 
-Siswa yang memuat ulang halaman atau terputus internetnya akan otomatis kembali ke kelasnya. Poinnya tidak hilang.
+Dasbor kelas hanya bisa dibuka dari perangkat yang membuatnya. Untuk membukanya dari perangkat lain (misalnya laptop sekolah minggu depan), tekan **Salin link dasbor** dan simpan link itu baik-baik. Siapa pun yang memegang link tersebut bisa mengatur kelas.
 
-## Aturan poin
+## Aturan nilai
 
-| | Level 1 | Level 2 | Level 3 | Level 4 |
-|---|---|---|---|---|
-| Benar di percobaan pertama | 600 | 700 | 800 | 900 |
-| Benar di percobaan kedua | 300 | 350 | 400 | 450 |
-| Benar di percobaan ketiga dst. | 120 | 140 | 160 | 180 |
+- Setiap soal hanya bisa dijawab **satu kali**. Siswa memilih jawaban lalu menekan **Kunci jawaban**, kemudian melihat jawaban yang benar dan pembahasannya.
+- Jawaban benar bernilai **10 poin** (bobot 1 per soal pada instrumen). Satu pertemuan berisi 10 soal, jadi **nilai pertemuan 0–100** dan **skor total maksimal 300**.
+- Bintang: nilai 85 ke atas ★★★, 60 ke atas ★★, di bawahnya ★.
+- Bila skor sama, siswa yang total waktu menjawabnya lebih singkat berada di atas. Waktu per soal dibatasi 5 menit supaya tab yang ditinggal tidak merusak urutan.
+- Siswa boleh keluar di tengah pertemuan. Saat kembali, soal yang sudah dikunci dilewati dan siswa melanjutkan dari soal berikutnya.
+- Mode **Latihan sendiri** tidak memakai kunci guru: pertemuan terbuka berurutan dan boleh diulang.
 
-- **Bonus kecepatan** sampai +300, hanya untuk benar di percobaan pertama. Batas waktunya 30 detik untuk pilihan ganda dan 60 detik untuk memilih benda atau mengurutkan. Batang "Bonus kecepatan" di layar menunjukkan sisa waktunya.
-- **Bonus beruntun** +100 per jawaban benar pertama berturut-turut, maksimal +300.
-- Setiap soal hanya dinilai sekali. Bila skor sama, peringkat ditentukan oleh jumlah benar pertama, lalu siapa yang lebih dulu mencapainya.
+Angka-angka ini ada di `shared/skor.js`.
 
-Angka-angka ini bisa diubah di `shared/skor.js`.
+## Isi file CSV
 
-## Mengubah atau menambah soal
+Satu baris per siswa: peringkat, nama, **Nilai P1, Nilai P2, Nilai P3**, skor total, jumlah benar, jumlah dijawab, waktu menjawab, lalu kolom **S1–S30** (1 = benar, 0 = salah) dan **J1–J30** (huruf jawaban siswa). Baris terakhir berisi kunci jawaban. Kolom S dan J bisa langsung dipakai untuk analisis butir soal (tingkat kesukaran, daya beda, efektivitas pengecoh).
 
-Buka `shared/konten.js`. Setiap tantangan punya `id` unik dan salah satu jenis berikut:
+## Mengubah soal
 
-- `quiz`: pilihan ganda (`opts`, tandai jawaban benar dengan `ok: 1`, ada `hint` dan `explain`)
-- `choice`: pilihan cerita melawan Si Kilat (`after` untuk jawaban benar, `conseq` untuk adegan akibat jawaban salah)
-- `pick`: pilih semua benda yang benar (`items: [ikon, label, 1/0]`)
-- `order`: urutkan langkah (`steps` ditulis dalam urutan benar; server mengacaknya)
+Semua soal ada di array `SOAL` di `shared/konten.js`. Setiap soal berisi:
 
-Kunci jawaban tidak pernah dikirim ke browser siswa. Browser hanya menerima soal dan umpan balik setelah menjawab.
+- `no`, `p` (pertemuan 1–3), `ranah` (C1–C6), `kategori` (LOTS/HOTS)
+- `isi`: stimulus. Bisa berupa teks, `{ ol: [...] }` daftar bernomor, `{ ul: [...] }` daftar biasa, atau `{ gambar: 'partikel' | 'grafik' }`
+- `tanya`, `opsi` (4 pilihan A–D), `kunci` (`'A'`–`'D'`), dan `pembahasan`
+
+Gambar model partikel (soal 10) dan grafik suhu malam (soal 16) digambar ulang sebagai SVG di `public/js/gambar.js` (objek `FIG`). Kunci jawaban tidak pernah dikirim ke browser siswa sebelum siswa mengunci jawabannya.
 
 ## Meng-online-kan (supaya bisa diakses dari mana saja)
 
@@ -80,7 +90,7 @@ Server ini butuh hosting yang menjalankan **Node.js** dan mendukung **WebSocket*
 3. Build command: `npm install`, start command: `npm start`. File `render.yaml` sudah disiapkan.
 4. Setelah selesai, Render memberi alamat seperti `https://batik-jetis.onrender.com`. Bagikan alamat itu ke siswa.
 
-Catatan paket gratis: server bisa "tertidur" bila lama tidak dipakai, jadi buka dasbor guru beberapa menit sebelum kelas dimulai. Penyimpanan file di paket gratis juga bisa terhapus saat server dimulai ulang, jadi **unduh CSV setelah kelas selesai**.
+Catatan paket gratis: server bisa "tertidur" bila lama tidak dipakai, jadi buka dasbor guru beberapa menit sebelum kelas dimulai. Penyimpanan file di paket gratis juga bisa terhapus saat server dimulai ulang. Karena satu kelas sekarang dipakai selama beberapa minggu (Pertemuan 1 sampai 3), **pakai hosting dengan disk permanen** (lihat Pilihan B) dan **unduh CSV setiap selesai satu pertemuan** sebagai cadangan.
 
 ### Pilihan B: Railway, Fly.io, atau VPS
 - Jalankan `npm install` lalu `npm start` (atau gunakan `Dockerfile`).
@@ -92,8 +102,9 @@ Catatan paket gratis: server bisa "tertidur" bila lama tidak dipakai, jadi buka 
 | `PORT` | Port server | `3000` |
 | `DATA_DIR` | Folder penyimpanan data kelas | `./data` |
 | `MAKS_PEMAIN` | Batas siswa per kelas | `200` |
+| `UMUR_KELAS_HARI` | Kelas dihapus setelah sekian hari tanpa aktivitas | `120` |
 
-Data kelas disimpan di `DATA_DIR/kelas.json`. Kelas otomatis dihapus setelah 14 hari, sesi latihan setelah 1 hari.
+Data kelas disimpan di `DATA_DIR/kelas.json`. Kelas otomatis dihapus setelah 120 hari tanpa aktivitas (satu semester), sesi latihan setelah 7 hari. Data dari versi lama (4 misi) tidak dimuat lagi karena soalnya sudah berganti.
 
 ## Menguji dengan banyak pemain
 
@@ -103,7 +114,7 @@ Jalankan server, lalu di terminal lain:
 npm run uji -- 30 http://localhost:3000
 ```
 
-Perintah ini membuat kelas, memasukkan 30 siswa bot yang menjawab bersamaan, lalu menampilkan papan peringkat. Tambahkan `BIARKAN=1` di depan perintah agar kelasnya tidak diakhiri, sehingga bisa dilihat di dasbor guru.
+Perintah ini membuat kelas dan memasukkan 30 siswa bot. Bot mengerjakan Pertemuan 1, memastikan Pertemuan 2 tertolak selama masih dikunci, lalu guru (bot) membuka Pertemuan 2 dan 3. Di akhir, papan peringkat, statistik pertemuan, dan CSV diperiksa. Tambahkan `BIARKAN=1` di depan perintah agar kelasnya tidak ditutup, sehingga bisa dilihat di dasbor guru.
 
 ## Pratinjau tanpa server
 
@@ -111,12 +122,12 @@ Perintah ini membuat kelas, memasukkan 30 siswa bot yang menjawab bersamaan, lal
 npm run preview
 ```
 
-Hasilnya `dist/pratinjau.html`, bisa dibuka langsung di browser untuk mencoba cerita satu pemain. Versi ini memuat kunci jawaban di dalam file, jadi gunakan hanya untuk mencoba, bukan untuk penilaian.
+Hasilnya `dist/pratinjau.html`, bisa dibuka langsung di browser untuk mencoba cerita dan soal satu pemain (tanpa kunci guru). Versi ini memuat kunci jawaban di dalam file, jadi gunakan hanya untuk mencoba, bukan untuk penilaian.
 
 ## Teknologi
 
 - **Node.js + Express**: server web dan unduhan CSV/QR
-- **Socket.IO**: koneksi langsung untuk lobi, skor, dan papan peringkat
+- **Socket.IO**: koneksi langsung untuk lobi, skor, papan peringkat, dan buka/kunci pertemuan
 - **qrcode**: membuat QR kode kelas
 - **HTML, CSS, JavaScript murni + SVG**: game tanpa engine berat, jadi ringan di Chromebook dan HP sekolah. Animasi gapura memakai SVG (filter riak kain, awan, burung, kilau papan).
 

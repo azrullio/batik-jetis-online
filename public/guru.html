@@ -119,6 +119,38 @@ tr.r1 .rk{background:var(--kunyit);color:var(--tinta)} tr.r2 .rk{background:#C9C
 .lvl{font:800 12px var(--f-body);background:#EFE1C4;color:var(--tinta-2);border-radius:999px;padding:.05em .6em}
 .ket{margin:0 0 10px;font-weight:700;color:var(--redup);font-size:14px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--tinta);color:#FFF6E4;border-radius:999px;padding:.5em 1.2em;font-weight:800;z-index:20;max-width:92vw}
+/* kunci pertemuan */
+.pt-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.pt-grid{grid-template-columns:1fr}}
+.pt{border:2px solid var(--garis);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;background:#fff}
+.pt.buka{border-color:#9BCB8A;background:#F4FAF0}
+.pt.tutup{background:#F5F1EA;border-style:dashed}
+.pt-atas{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pt-no{font:800 20px var(--f-display);color:var(--merah)}
+.pt-status{display:inline-flex;align-items:center;gap:.35em;font:800 14px var(--f-body);border-radius:999px;padding:.15em .7em}
+.pt-status svg{width:1.1em;height:1.1em}
+.pt.buka .pt-status{background:#DDF0D6;color:var(--daun-tua)}
+.pt.tutup .pt-status{background:#E3DDD3;color:#5A4E40}
+.pt-topik{font:800 16px var(--f-display);color:var(--tinta)}
+.pt-angka{display:flex;flex-wrap:wrap;gap:4px 14px;font-weight:700;font-size:14px;color:var(--tinta-2)}
+.pt-angka b{color:var(--tinta);font-variant-numeric:tabular-nums}
+.pt-bar{height:8px;border-radius:999px;background:#EFE1C4;overflow:hidden}
+.pt-bar i{display:block;height:100%;background:var(--daun)}
+.pt-catatan{font-weight:800;font-size:14px;color:var(--redup)}
+.stat small{font-size:16px;color:var(--redup)}
+.nilai{display:inline-block;min-width:2.4em;text-align:center;border-radius:999px;padding:.05em .5em;font:800 15px var(--f-display);font-variant-numeric:tabular-nums}
+.nilai.a{background:#DDF0D6;color:var(--daun-tua)}.nilai.b{background:#FFF0C7;color:#7A5300}.nilai.c{background:var(--bahaya-bg);color:var(--merah-tua)}
+.sedang{font-weight:800;font-size:13px;color:var(--nila)}
+.kunci-kecil{font-size:13px;opacity:.6}
+.f-kecil{display:flex;align-items:center;gap:6px;font-weight:800;color:var(--tinta-2);font-size:14px}
+select.t.kecil{font-size:15px;padding:.25em .5em}
+table.butir td{padding:6px 8px;font-size:14px}
+table.butir .lvl{white-space:nowrap}
+table.butir .judul{min-width:220px;line-height:1.35}
+table.butir .pct{min-width:130px}
+table.butir .sebar{font-weight:800;color:var(--tinta-2);min-width:2.4em;text-align:center}
+table.butir .sebar.kunci{background:#DDF0D6;color:var(--daun-tua)}
+table.butir .sebar.pengecoh{background:var(--bahaya-bg);color:var(--merah-tua)}
 .proyektor .sembunyi-proyektor{display:none!important}
 .proyektor main{max-width:none}
 .proyektor table{font-size:20px}

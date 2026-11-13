@@ -1,9 +1,9 @@
 /*
- * Sistem skor ala Quizizz.
- *  - Poin dasar naik per level (makin sulit, makin besar).
- *  - Bonus kecepatan hanya untuk jawaban benar di percobaan pertama.
- *  - Bonus beruntun untuk jawaban benar pertama yang berturut-turut.
- *  - Benar di percobaan kedua: 50% poin dasar, ketiga dan seterusnya: 20%.
+ * Sistem nilai Petualangan Batik Jetis (sesuai instrumen: bobot 1 per soal).
+ *  - Setiap soal hanya bisa dijawab SEKALI.
+ *  - Jawaban benar = 10 poin, salah = 0. Satu pertemuan berisi 10 soal, jadi nilai pertemuan 0–100.
+ *  - Skor total = jumlah nilai semua pertemuan (maksimal 300).
+ *  - Jika skor sama, yang menjawab lebih cepat (total waktu lebih kecil) berada di atas.
  * Dipakai oleh server (versi online) dan oleh mode latihan offline.
  */
 (function (root, factory) {
@@ -12,68 +12,67 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const DASAR = { 1: 600, 2: 700, 3: 800, 4: 900 };
-  const BATAS = { quiz: 30000, choice: 30000, pick: 60000, order: 60000 }; // ms untuk bonus kecepatan
-  const BONUS_CEPAT = 300;
-  const BONUS_BERUNTUN = 100;
-  const BONUS_BERUNTUN_MAKS = 300;
+  const POIN_BENAR = 10;
+  const WAKTU_MAKS = 5 * 60 * 1000; // waktu satu soal dibatasi 5 menit agar tab yang ditinggal tidak merusak urutan
 
   function pemainBaru(id, token, nama, g, now) {
-    return { id, token, nama, g, skor: 0, beruntun: 0, benarPertama: 0, soalSelesai: 0, soal: {}, level: {}, gabung: now, terakhir: now, selesaiSemua: 0, online: 0 };
+    return { id, token, nama, g, skor: 0, benar: 0, dijawab: 0, waktu: 0, soal: {}, level: {}, gabung: now, terakhir: now, selesaiSemua: 0, online: 0 };
   }
 
   function catatanSoal(p, id) {
-    return p.soal[id] || (p.soal[id] = { percobaan: 0, mulai: 0, selesai: false, poin: 0 });
+    return p.soal[id] || (p.soal[id] = { mulai: 0, j: -1, benar: false, ms: 0, poin: 0, dijawab: false });
   }
 
   /** Dipanggil saat soal mulai tampil di layar pemain. */
   function mulai(p, id, now) {
     const s = catatanSoal(p, id);
-    if (!s.selesai && !s.percobaan && !s.mulai) s.mulai = now;
+    if (!s.dijawab && !s.mulai) s.mulai = now;
   }
 
-  /** Mencatat satu jawaban. Setiap soal hanya dinilai sekali (saat pertama kali benar). */
-  function catat(p, info, benar, now) {
+  /** Mencatat jawaban. Soal yang sudah dijawab tidak bisa dijawab ulang. */
+  function catat(p, info, j, benar, now) {
     const s = catatanSoal(p, info.id);
-    if (s.selesai) return { poin: 0, sudah: true, percobaan: s.percobaan };
-    s.percobaan++;
-    p.terakhir = now;
-    if (!benar) { p.beruntun = 0; return { poin: 0, percobaan: s.percobaan }; }
-
-    const pertama = s.percobaan === 1;
-    p.beruntun = pertama ? (p.beruntun || 0) + 1 : 0;
-    const penuh = DASAR[info.level] || 600;
-    const dasar = pertama ? penuh : Math.round(penuh * (s.percobaan === 2 ? 0.5 : 0.2));
-    const batas = BATAS[info.tipe] || 30000;
-    const ms = s.mulai ? Math.max(0, now - s.mulai) : batas;
-    const cepat = pertama ? Math.round(BONUS_CEPAT * Math.max(0, 1 - ms / batas)) : 0;
-    const beruntun = pertama ? Math.min(BONUS_BERUNTUN_MAKS, Math.max(0, (p.beruntun - 1) * BONUS_BERUNTUN)) : 0;
-    const poin = dasar + cepat + beruntun;
-
-    s.selesai = true; s.poin = poin;
-    p.skor += poin; p.soalSelesai++;
-    if (pertama) p.benarPertama++;
-    return { poin, dasar, cepat, beruntun, percobaan: s.percobaan, deret: p.beruntun };
+    if (s.dijawab) return { sudah: true, poin: s.poin, benar: s.benar, j: s.j };
+    const ms = s.mulai ? Math.min(WAKTU_MAKS, Math.max(0, now - s.mulai)) : WAKTU_MAKS;
+    const poin = benar ? POIN_BENAR : 0;
+    Object.assign(s, { j, benar: !!benar, ms, poin, dijawab: true });
+    p.skor += poin; p.dijawab++; p.waktu += ms; p.terakhir = now;
+    if (benar) p.benar++;
+    return { poin, ms };
   }
 
-  /** Menutup satu level: semua tantangan harus sudah benar. */
-  function selesaiLevel(p, n, ids) {
-    if (!ids.length || ids.some((id) => !(p.soal[id] && p.soal[id].selesai))) return { ok: false, err: 'Masih ada tantangan yang belum selesai.' };
-    const nilai = ids.map((id) => { const a = p.soal[id].percobaan; return a === 1 ? 3 : a === 2 ? 2 : 1; });
-    const rasio = nilai.reduce((a, b) => a + b, 0) / (3 * ids.length);
-    const bintang = rasio >= 0.9 ? 3 : rasio >= 0.6 ? 2 : 1;
-    const poin = ids.reduce((a, id) => a + p.soal[id].poin, 0);
-    p.level[n] = { selesai: true, bintang, poin };
-    return { ok: true, bintang, poin };
+  /** Menutup satu pertemuan: semua soal harus sudah dijawab. Nilai 0–100. */
+  function selesaiLevel(p, n, ids, now) {
+    if (!ids.length || ids.some((id) => !(p.soal[id] && p.soal[id].dijawab))) return { ok: false, err: 'Masih ada soal yang belum dijawab.' };
+    const benar = ids.filter((id) => p.soal[id].benar).length;
+    const nilai = Math.round((benar / ids.length) * 100);
+    const bintang = nilai >= 85 ? 3 : nilai >= 60 ? 2 : 1;
+    const waktu = ids.reduce((a, id) => a + p.soal[id].ms, 0);
+    if (!(p.level[n] && p.level[n].selesai)) p.level[n] = { selesai: true, nilai, benar, soal: ids.length, bintang, waktu, kapan: now || Date.now() };
+    return Object.assign({ ok: true }, p.level[n]);
   }
 
-  /** Urutan papan peringkat: skor, lalu jumlah benar pertama, lalu siapa yang lebih dulu mencapainya. */
+  /** Mode latihan: menghapus jawaban satu pertemuan supaya bisa diulang. */
+  function ulangLevel(p, n, ids) {
+    ids.forEach((id) => {
+      const s = p.soal[id]; if (!s) return;
+      if (s.dijawab) { p.skor -= s.poin; p.dijawab--; p.waktu -= s.ms; if (s.benar) p.benar--; }
+      delete p.soal[id];
+    });
+    delete p.level[n];
+    p.selesaiSemua = 0;
+  }
+
+  /** Berapa soal sudah dijawab di satu pertemuan. */
+  function progres(p, ids) { return ids.filter((id) => p.soal[id] && p.soal[id].dijawab).length; }
+
+  /** Urutan papan peringkat: skor, lalu waktu total lebih cepat, lalu siapa yang lebih dulu mencapainya. */
   function urutkan(arr) {
     return arr.slice().sort((a, b) =>
-      (b.skor - a.skor) || (b.benarPertama - a.benarPertama) || ((a.terakhir || 0) - (b.terakhir || 0)) || String(a.nama).localeCompare(String(b.nama)));
+      (b.skor - a.skor) || ((a.waktu || 0) - (b.waktu || 0)) || ((a.terakhir || 0) - (b.terakhir || 0)) || String(a.nama).localeCompare(String(b.nama)));
   }
 
-  function akurasi(p) { return p.soalSelesai ? Math.round((p.benarPertama / p.soalSelesai) * 100) : 0; }
+  function akurasi(p) { return p.dijawab ? Math.round((p.benar / p.dijawab) * 100) : 0; }
 
-  return { DASAR, BATAS, BONUS_CEPAT, pemainBaru, mulai, catat, selesaiLevel, urutkan, akurasi };
+  return { POIN_BENAR, WAKTU_MAKS, pemainBaru, mulai, catat, selesaiLevel, ulangLevel, progres, urutkan, akurasi };
 });

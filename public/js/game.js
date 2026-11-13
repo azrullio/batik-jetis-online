@@ -19,7 +19,7 @@ const tulisJ = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } c
 const SET = Object.assign({ music: 55, sfx: 80, speed: 'normal' }, bacaJ(SETKEY) || {});
 
 /* =================== STATUS PERMAINAN =================== */
-let U = null; // konten umum (LOC, MISI, PROLOG, ...)
+let U = null; // konten umum (LOC, TOPIK, INDIKATOR, PROLOG, ...)
 const G = { sesi: null, aku: null, papan: [], kartu: null };
 const kelasMode = () => G.sesi && G.sesi.mode === 'kelas';
 
@@ -114,36 +114,22 @@ async function runBeat(b, my) {
     case 'show': setActor(b.slot, b.who, b.cls); await sleep(RM ? 50 : 500); break;
     case 'hide': hideActor(b.slot); await sleep(RM ? 20 : 380); break;
     case 'say': await say(b.who, b.text); break;
-    case 'choice': await doChoice(b, my); break;
-    case 'quiz': await doQuiz(b, my); break;
-    case 'pick': await doPick(b, my); break;
-    case 'order': await doOrder(b, my); break;
+    case 'soal': await doSoal(b, my); break;
   }
 }
 
-/* ---------- poin, timer, koneksi ---------- */
-let tTimer = null;
-function mulaiTimer(id, tipe) {
-  API.mulaiSoal(id);
-  const ms = (U.BATAS && U.BATAS[tipe]) || 30000;
-  const t = $('#timer'), bar = $('#timerBar'), lbl = $('#timerLbl');
-  t.hidden = false; lbl.hidden = false; bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)'; void bar.offsetWidth;
-  bar.style.transition = `transform ${ms}ms linear`; bar.style.transform = 'scaleX(0)';
-  clearTimeout(tTimer); tTimer = setTimeout(hentikanTimer, ms);
-}
-function hentikanTimer() { clearTimeout(tTimer); $('#timer').hidden = true; $('#timerLbl').hidden = true; }
+/* ---------- poin & koneksi ---------- */
 function tampilPlus(r) {
   if (!r || !(r.poin > 0)) return;
   const d = document.createElement('div'); d.className = 'plus';
-  const rinci = [r.cepat ? `bonus cepat +${r.cepat}` : '', r.beruntun ? `beruntun +${r.beruntun}` : ''].filter(Boolean).join(', ');
-  d.innerHTML = `<b>+${angka(r.poin)}</b>${rinci ? `<span>${rinci}</span>` : ''}`;
+  d.innerHTML = `<b>+${angka(r.poin)}</b><span>jawaban benar</span>`;
   $('#stage').appendChild(d); setTimeout(() => d.remove(), 1900);
 }
 function setSkor(skor, peringkat, jumlah) {
   if (G.aku) G.aku.skor = skor;
   if (peringkat) { G.peringkat = peringkat; G.jumlah = jumlah; }
-  const hp = $('#hudPoin'); hp.hidden = false; hp.textContent = `${angka(skor)} poin`;
-  $('#mapPoin').textContent = `${angka(skor)} poin`;
+  const hp = $('#hudPoin'); hp.hidden = false; hp.textContent = `Skor ${angka(skor)}`;
+  $('#mapPoin').textContent = `Skor ${angka(skor)}`;
   updRank();
 }
 function updRank() {
@@ -153,8 +139,11 @@ function updRank() {
   if (i >= 0) { G.peringkat = i + 1; G.jumlah = G.papan.length; }
   r.hidden = !G.peringkat; r.textContent = `Peringkat ${G.peringkat}/${G.jumlah}`;
 }
-function catatHasil(r) { if (lv) { lv.done++; updProg(); } setSkor(r.skor, r.peringkat, r.jumlah); tampilPlus(r); }
-function updProg() { const p = $('#hudProg'); if (!lv) { p.hidden = true; return; } p.hidden = false; p.textContent = `Tantangan ${Math.min(lv.done + 1, lv.total)}/${lv.total}`; }
+function catatHasil(id, r) {
+  if (lv && !(id in lv.hasil)) { lv.hasil[id] = !!r.benar; lv.done++; if (G.aku.progres) G.aku.progres[lv.n] = lv.done; updProg(); }
+  setSkor(r.skor, r.peringkat, r.jumlah);
+}
+function updProg() { const p = $('#hudProg'); if (!lv) { p.hidden = true; return; } p.hidden = false; p.textContent = `Soal ${Math.min(lv.done + 1, lv.total)}/${lv.total}`; }
 
 function kartuKoneksi() {
   return new Promise((res) => {
@@ -172,6 +161,8 @@ async function kirim(fn, my) {
       const r = await fn();
       if (r && r.ok === false) {
         if (r.status === 'selesai') { selesaiDariGuru(); return null; }
+        if (r.status === 'lobby') { lobbyCard(); return null; }
+        if (r.kunci) { if (r.buka && G.sesi) G.sesi.buka = r.buka; openMap(); }
         toast(r.err || 'Terjadi kesalahan.'); return null;
       }
       return r;
@@ -179,104 +170,82 @@ async function kirim(fn, my) {
   }
 }
 
-/* ---------- pilihan & soal ---------- */
-function openOptions(title, opts, dis) {
-  const box = $('#choice');
-  box.innerHTML = `<h3>${esc(fmt(title))}</h3>` + opts.map((o, i) => `<button class="opt" data-i="${i}" ${dis && dis.has(i) ? 'disabled' : ''}>${o.icon ? `<span class="ic">${ic(o.icon)}</span>` : ''}<span>${esc(o.text)}</span></button>`).join('');
-  box.hidden = false; const first = box.querySelector('.opt:not([disabled])'); if (first) first.focus({ preventScroll: true });
-  return new Promise((res) => { box.querySelectorAll('.opt').forEach((btn) => btn.addEventListener('click', (e) => { e.stopPropagation(); if (btn.disabled) return; box.querySelectorAll('.opt').forEach((x) => { x.disabled = true; }); sfx('klik'); res(+btn.dataset.i); })); });
-}
+/* ---------- kartu soal pilihan ganda ---------- */
 function closeOptions() { const b = $('#choice'); b.hidden = true; b.innerHTML = ''; }
+function card(html, w) { const c = $('#card'); c.className = 'card'; c.style.setProperty('--w', (w || 560) + 'px'); c.innerHTML = html; $('#modal').hidden = false; return c; }
+function closeCard() { $('#modal').hidden = true; const c = $('#card'); c.innerHTML = ''; c.className = 'card'; G.kartu = null; }
 
-async function doChoice(b, my) {
-  let first = true;
-  while (my === runId) {
-    setPose('front');
-    typeText('Sekar', fmt(b.prompt), false);
-    if (first) mulaiTimer(b.id, 'choice');
-    const i = await openOptions(b.q, b.opts); if (my !== runId) return;
-    const r = await kirim(() => API.jawab(b.id, i), my); if (my !== runId) return;
-    closeOptions();
-    if (!r) continue;
-    if (first) { hentikanTimer(); first = false; }
-    if (r.benar) { sfx('benar'); catatHasil(r); setPose('back'); await runBeats(r.reaksi || [], my); return; }
-    sfx('salah'); const s = snap(); setPose('back');
-    await runBeats(r.reaksi || [], my); if (my !== runId) return;
-    restore(s); await sleep(300);
-    await say('Sekar', 'Jalan pintas memang menggoda. Ayo kita pilih lagi dengan lebih bijak.');
-  }
+function isiSoalHTML(isi) {
+  return (isi || []).map((x) => {
+    if (typeof x === 'string') return `<p>${esc(x)}</p>`;
+    if (x.ol) return `<ol>${x.ol.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>`;
+    if (x.ul) return `<ul>${x.ul.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>`;
+    if (x.gambar && GB.FIG[x.gambar]) return `<figure class="fig">${GB.FIG[x.gambar]()}</figure>`;
+    return '';
+  }).join('');
 }
-async function doQuiz(b, my) {
-  let first = true; const dis = new Set();
-  while (my === runId) {
-    typeText('Sekar', fmt(b.q), false);
-    if (first) mulaiTimer(b.id, 'quiz');
-    const i = await openOptions('Pilih jawabanmu', b.opts, dis); if (my !== runId) return;
-    const r = await kirim(() => API.jawab(b.id, i), my); if (my !== runId) return;
-    if (!r) { closeOptions(); continue; }
-    if (first) { hentikanTimer(); first = false; }
-    if (r.benar) { closeOptions(); sfx('benar'); catatHasil(r); await say('Sekar', r.pesan); return; }
-    sfx('salah'); const btn = $('#choice').querySelector(`[data-i="${i}"]`); if (btn) btn.classList.add('shake');
-    dis.add(i); await sleep(450); closeOptions();
-    await say('Sekar', r.pesan || 'Belum tepat. Coba pikirkan lagi.');
-  }
+const HURUF = ['A', 'B', 'C', 'D'];
+function titikProgres(aktif) {
+  if (!lv) return '';
+  return `<span class="jejak" aria-hidden="true">${lv.ids.map((id) => `<i class="${id in lv.hasil ? (lv.hasil[id] ? 'ok' : 'no') : id === aktif ? 'kini' : ''}"></i>`).join('')}</span>`;
 }
-function card(html, w) { const c = $('#card'); c.style.setProperty('--w', (w || 560) + 'px'); c.innerHTML = html; $('#modal').hidden = false; return c; }
-function closeCard() { $('#modal').hidden = true; $('#card').innerHTML = ''; G.kartu = null; }
-
-function doPick(b, my) {
-  $('#dlg').hidden = true;
+/** Satu soal = satu kesempatan menjawab. Pilih opsi, lalu tekan "Kunci jawaban". */
+function doSoal(b, my) {
+  $('#dlg').hidden = true; dlgResolve = null;
   return new Promise((res) => {
-    let first = true; const sel = new Set(); let sibuk = false;
-    const c = card(`<span class="ttl">${esc(b.title)}</span><p>${esc(b.q)}</p><div class="grid ${b.cols === 3 ? 'g3' : ''}">${b.items.map(([k, l], i) => `<button class="item" data-i="${i}" aria-pressed="false">${ic(k)}<span>${esc(l)}</span></button>`).join('')}</div><div class="fb" id="fb" aria-live="polite"></div><div class="row"><button class="btn" id="cek">Periksa</button></div>`, b.cols === 3 ? 520 : 720);
-    mulaiTimer(b.id, 'pick');
-    c.querySelectorAll('.item').forEach((el) => el.addEventListener('click', () => { const i = +el.dataset.i; el.classList.remove('bad'); sel.has(i) ? sel.delete(i) : sel.add(i); el.setAttribute('aria-pressed', sel.has(i)); sfx('klik'); }));
-    c.querySelector('#cek').addEventListener('click', async () => {
-      if (my !== runId || sibuk) return; const fb = c.querySelector('#fb');
-      if (!sel.size) { fb.className = 'fb no'; fb.textContent = 'Pilih dulu minimal satu, ya.'; return; }
-      sibuk = true; const r = await kirim(() => API.jawab(b.id, [...sel]), my); sibuk = false; if (my !== runId || !r) return;
-      if (first) { hentikanTimer(); first = false; }
-      if (r.benar) { sfx('benar'); fb.className = 'fb ok'; fb.textContent = 'Semua benar!'; catatHasil(r); await sleep(700); closeCard(); await say('Sekar', r.pesan); res(); return; }
-      sfx('salah'); (r.salah || []).forEach((i) => { const el = c.querySelector(`[data-i="${i}"]`); if (el) el.classList.add('bad'); });
-      const msg = []; if (r.salah && r.salah.length) msg.push(`${r.salah.length} pilihan tidak dipakai`); if (r.kurang > 0) msg.push(`masih kurang ${r.kurang}`);
-      fb.className = 'fb no'; fb.textContent = 'Belum tepat: ' + msg.join(', ') + '.';
+    const adaIsi = b.isi && b.isi.length;
+    const c = card(`<div class="soal-kepala"><span class="no">Soal ${b.urut} dari ${lv ? lv.total : 10}</span>${titikProgres(b.id)}<span class="tag">${esc(b.ranah)}</span></div>
+      <div class="soal-badan ${adaIsi ? 'dua' : ''}">
+        ${adaIsi ? `<div class="stimulus">${isiSoalHTML(b.isi)}</div>` : ''}
+        <div class="jawab">
+          <p class="tanya">${esc(b.tanya)}</p>
+          <div class="opsi" role="radiogroup" aria-label="Pilihan jawaban">${b.opsi.map((o, i) => `<button class="op" role="radio" aria-checked="false" data-i="${i}"><b>${HURUF[i]}</b><span>${esc(o)}</span></button>`).join('')}</div>
+          <div class="hasil" id="hasil" aria-live="polite" hidden></div>
+          <div class="row"><button class="btn" id="kunciJ" disabled>Kunci jawaban</button></div>
+          <p class="catatan" id="catatan">Setiap soal hanya bisa dijawab satu kali.</p>
+        </div>
+      </div>`, adaIsi ? 1060 : 760);
+    c.classList.add('soal-card');
+    c.scrollTop = 0; const st = c.querySelector('.stimulus'); if (st) st.scrollTop = 0;
+    API.mulaiSoal(b.id);
+    let pilih = -1, sibuk = false, beres = false;
+    const ops = [...c.querySelectorAll('.op')], tombol = c.querySelector('#kunciJ');
+    const tandai = (i) => { pilih = i; ops.forEach((o, k) => o.setAttribute('aria-checked', String(k === i))); tombol.disabled = false; };
+    ops.forEach((o) => o.addEventListener('click', (e) => { e.stopPropagation(); if (sibuk || beres) return; sfx('klik'); tandai(+o.dataset.i); }));
+    c.addEventListener('keydown', (e) => {
+      if (beres || sibuk || e.target.closest('input')) return;
+      const k = HURUF.indexOf(String(e.key).toUpperCase()); if (k >= 0 && k < ops.length) { e.preventDefault(); tandai(k); ops[k].focus(); }
     });
-  });
-}
-function doOrder(b, my) {
-  $('#dlg').hidden = true;
-  return new Promise((res) => {
-    let first = true, sibuk = false; const n = b.steps.length; const placed = [];
-    const teks = (id) => (b.steps.find((s) => s.id === id) || {}).text || '';
-    const c = card(`<span class="ttl">${esc(b.title)}</span><p>${esc(b.q)}</p><div class="order"><div class="col"><h4>Langkah</h4><div class="col" id="pool"></div></div><div class="col"><h4>Urutanmu</h4><div class="col" id="slots"></div></div></div><div class="fb" id="fb" aria-live="polite"></div><div class="row"><button class="btn alt" id="ulang">Ulangi</button><button class="btn" id="cek">Periksa</button></div>`, 760);
-    mulaiTimer(b.id, 'order');
-    const draw = () => {
-      c.querySelector('#pool').innerHTML = b.steps.map((s) => `<button class="chip" data-id="${s.id}" ${placed.includes(s.id) ? 'disabled' : ''}>${esc(s.text)}</button>`).join('');
-      c.querySelector('#slots').innerHTML = Array.from({ length: n }, (_, k) => `<button class="slot" data-k="${k}"><b>${k + 1}</b><span>${placed[k] !== undefined ? esc(teks(placed[k])) : ''}</span></button>`).join('');
-      c.querySelectorAll('.chip').forEach((el) => el.addEventListener('click', () => { if (el.disabled) return; placed.push(el.dataset.id); sfx('klik'); draw(); }));
-      c.querySelectorAll('.slot').forEach((el) => el.addEventListener('click', () => { const k = +el.dataset.k; if (placed[k] === undefined) return; placed.splice(k, 1); draw(); }));
-    }; draw();
-    c.querySelector('#ulang').addEventListener('click', () => { placed.length = 0; c.querySelector('#fb').textContent = ''; draw(); });
-    c.querySelector('#cek').addEventListener('click', async () => {
-      if (my !== runId || sibuk) return; const fb = c.querySelector('#fb');
-      if (placed.length < n) { fb.className = 'fb no'; fb.textContent = 'Isi semua urutan dulu, ya.'; return; }
-      sibuk = true; const r = await kirim(() => API.jawab(b.id, placed.slice()), my); sibuk = false; if (my !== runId || !r) return;
-      if (first) { hentikanTimer(); first = false; }
-      let ok = 0; c.querySelectorAll('.slot').forEach((el, k) => { const good = r.posisi && r.posisi[k]; el.classList.add(good ? 'ok' : 'bad'); if (good) ok++; });
-      if (r.benar) { sfx('benar'); fb.className = 'fb ok'; fb.textContent = 'Urutannya benar!'; catatHasil(r); await sleep(900); closeCard(); await say('Sekar', r.pesan); res(); return; }
-      sfx('salah'); fb.className = 'fb no'; fb.textContent = `${ok} dari ${n} sudah di tempat yang benar. Ketuk langkah yang salah untuk mengeluarkannya.`;
-      setTimeout(() => c.querySelectorAll('.slot').forEach((el) => el.classList.remove('bad', 'ok')), 1400);
+    tombol.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (beres) { closeCard(); res(); return; }
+      if (sibuk || pilih < 0) return;
+      sibuk = true; tombol.disabled = true; ops.forEach((o) => { o.disabled = true; });
+      const r = await kirim(() => API.jawab(b.id, pilih), my); sibuk = false;
+      if (my !== runId) { res(); return; }
+      if (!r) { tombol.disabled = false; ops.forEach((o) => { o.disabled = false; }); return; }
+      beres = true;
+      const dipilih = r.sudah && Number.isInteger(r.j) ? r.j : pilih;
+      if (dipilih !== pilih) tandai(dipilih);
+      ops.forEach((o, k) => { o.disabled = true; if (k === r.kunci) o.classList.add('benar'); else if (k === dipilih) o.classList.add('salah'); });
+      const h = c.querySelector('#hasil'); h.hidden = false; h.className = 'hasil ' + (r.benar ? 'ok' : 'no');
+      h.innerHTML = `<b>${r.benar ? `Benar! +${angka(r.poin || 10)} poin` : `Belum tepat. Jawaban yang benar: ${HURUF[r.kunci]}.`}</b>${r.pembahasan ? `<span>${esc(r.pembahasan)}</span>` : ''}`;
+      c.querySelector('#catatan').hidden = true;
+      sfx(r.benar ? 'benar' : 'salah'); catatHasil(b.id, r);
+      const t = c.querySelector(".jejak"); if (t) t.outerHTML = titikProgres('');
+      tombol.textContent = lv && lv.done >= lv.total ? 'Lihat nilai' : 'Soal berikutnya'; tombol.disabled = false;
+      h.scrollIntoView({ block: 'nearest', behavior: RM ? 'auto' : 'smooth' }); tombol.focus({ preventScroll: true });
     });
   });
 }
 
 /* =================== ALUR UTAMA =================== */
 function prepScene(mode, loc) {
-  show('scrScene'); $('#scrScene').dataset.mode = mode; closeOptions(); closeCard(); hentikanTimer();
+  show('scrScene'); $('#scrScene').dataset.mode = mode; closeOptions(); closeCard();
   $('#dlg').hidden = true; dlgResolve = null; resetActors(); $('#bgWrap').innerHTML = ''; curBg = ''; curFx = '';
   $('#hudLoc').innerHTML = loc ? `<svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z" fill="#E0463A"/><circle cx="12" cy="9" r="2.6" fill="#fff"/></svg>${esc(loc)}` : '';
   $('#btnSkip').hidden = mode !== 'prolog';
-  const hp = $('#hudPoin'); hp.hidden = mode !== 'level'; hp.textContent = `${angka(G.aku ? G.aku.skor : 0)} poin`;
+  const hp = $('#hudPoin'); hp.hidden = mode !== 'level'; hp.textContent = `Skor ${angka(G.aku ? G.aku.skor : 0)}`;
   updProg();
 }
 const introKey = () => 'bj.intro.' + (G.sesi ? G.sesi.pin : '');
@@ -404,61 +373,102 @@ function lewatGapura(my) {
 }
 async function playLevel(n) {
   const r = await kirim(() => API.ambilLevel(n)); if (!r) return;
-  const beats = r.beats; const my = ++runId;
-  lv = { n, done: 0, total: beats.filter((b) => ['quiz', 'choice', 'pick', 'order'].includes(b.t)).length };
-  prepScene('level', U.LOC[n]); await runBeats(beats, my); if (my !== runId) return; finishLevel(n, my);
+  const my = ++runId; const beats = r.beats; const dij = r.dijawab || {};
+  if (levelSelesai(n)) { delete G.aku.level[n]; G.aku.progres && (G.aku.progres[n] = 0); } // latihan: mulai ulang
+  if (r.skor !== undefined) setSkor(r.skor);
+  const ids = beats.filter((b) => b.t === 'soal').map((b) => b.id);
+  lv = { n, ids, total: ids.length, done: 0, hasil: {} };
+  ids.forEach((id) => { if (dij[id]) { lv.hasil[id] = !!dij[id].benar; lv.done++; } });
+  // Melanjutkan: lewati soal yang sudah dijawab dan cerita sebelum soal terakhir yang dijawab.
+  let akhir = -1; beats.forEach((b, i) => { if (b.t === 'soal' && dij[b.id]) akhir = i; });
+  let jalan = beats.filter((b, i) => !(b.t === 'soal' && dij[b.id]) && !(b.t === 'say' && i < akhir));
+  if (lv.done > 0 && lv.done < lv.total) {
+    const k = jalan.findIndex((b) => b.t === 'show');
+    jalan.splice(k + 1, 0, { t: 'say', who: 'Sekar', text: `Selamat datang kembali, {nama}! Kamu sudah menjawab ${lv.done} soal. Ayo lanjutkan.` });
+  }
+  prepScene('level', `${U.LOC[n]} · ${U.TEMPAT[n]}`); await runBeats(jalan, my); if (my !== runId) return; finishLevel(n, my);
 }
 const starSVG = (on) => `<svg viewBox="0 0 24 24" class="${on ? 'on' : ''}"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="${on ? '#F2B632' : '#E3D2AE'}" stroke="${on ? '#B9861C' : '#C9B58E'}" stroke-width="1.2"/></svg>`;
 async function finishLevel(n, my) {
   const r = await kirim(() => API.selesaiLevel(n), my); if (!r || my !== runId) return;
-  G.aku.level[n] = { selesai: true, bintang: r.bintang, poin: r.poin }; G.at = n; setSkor(r.skor, r.peringkat, r.jumlah); sfx('bintang');
-  const akhir = n >= G.sesi.sampaiLevel;
-  const next = !akhir ? `<button class="btn" id="nx">Lanjut ke ${esc(U.LOC[n + 1])}</button>` : `<button class="btn" id="nx">Lihat hasil akhir</button>`;
-  const info = `<div class="saya"><div><b>+${angka(r.poin)}</b><span>poin misi ini</span></div><div><b>${angka(r.skor)}</b><span>total poin</span></div>${kelasMode() ? `<div><b>#${r.peringkat}</b><span>dari ${r.jumlah} pemain</span></div>` : ''}</div>`;
-  const c = card(`<span class="ttl">Misi selesai</span><h3 class="big">${esc(U.LOC[n])}</h3><div class="stars">${[1, 2, 3].map((i) => starSVG(i <= r.bintang)).join('')}</div>${info}<ul class="learn">${U.PELAJARAN[n].map((x) => `<li>${esc(x)}</li>`).join('')}</ul><div class="row"><button class="btn alt" id="kp">Ke peta</button>${next}</div>`, 560);
-  c.querySelector('#kp').onclick = () => { closeCard(); openMap(); };
-  c.querySelector('#nx').onclick = () => { closeCard(); if (!akhir) openMap(n + 1); else { openMap(); hasilAkhir(false); } };
+  G.aku.level[n] = { selesai: true, nilai: r.nilai, benar: r.benar, soal: r.soal, bintang: r.bintang };
+  if (r.buka && G.sesi) G.sesi.buka = r.buka;
+  G.at = n; setSkor(r.skor, r.peringkat, r.jumlah);
+  sfx('bintang');
+  G.nilaiTerakhir = { n, r, hasil: lv ? Object.assign({}, lv.hasil) : {}, ids: lv ? lv.ids.slice() : [] };
+  lv = null; updProg();
+  skorCard();
 }
+/** Kartu nilai setelah satu pertemuan selesai. Ditampilkan ulang bila guru membuka pertemuan berikutnya. */
+function skorCard() {
+  const T = G.nilaiTerakhir; if (!T) return; const { n, r } = T; G.kartu = 'skor'; $('#dlg').hidden = true; dlgResolve = null;
+  const akhir = n >= U.JUMLAH_PERTEMUAN;
+  const kunciGuru = !akhir && kelasMode() && n + 1 > (G.sesi.buka || 1);
+  const pesan = r.nilai >= 85 ? 'Luar biasa!' : r.nilai >= 60 ? 'Bagus, terus belajar!' : 'Tetap semangat, pelajari lagi pembahasannya.';
+  let lanjut;
+  if (akhir) lanjut = `<button class="btn" id="nx">Lihat hasil akhir</button>`;
+  else if (kunciGuru) lanjut = '';
+  else lanjut = `<button class="btn" id="nx">Lanjut ke ${esc(U.LOC[n + 1])}</button>`;
+  const c = card(`<span class="ttl">${esc(U.LOC[n])} selesai</span>
+    <div class="nilai-besar"><b>${r.nilai}</b><span>nilai</span></div>
+    <div class="stars">${[1, 2, 3].map((i) => starSVG(i <= r.bintang)).join('')}</div>
+    <p><b>${pesan}</b> Kamu menjawab benar <b>${r.benar}</b> dari <b>${r.soal}</b> soal.</p>
+    <div class="rekap" aria-label="Rekap jawaban">${T.ids.map((id, i) => `<span class="${T.hasil[id] ? 'ok' : 'no'}" title="Soal ${id.slice(1)}: ${T.hasil[id] ? 'benar' : 'salah'}">${id.slice(1)}<i>${T.hasil[id] ? '✓' : '✗'}</i></span>`).join('')}</div>
+    <div class="saya"><div><b>${angka(r.skor)}</b><span>skor total</span></div>${kelasMode() ? `<div><b>#${G.peringkat || r.peringkat}</b><span>dari ${G.jumlah || r.jumlah} siswa</span></div>` : ''}</div>
+    ${kunciGuru ? `<p class="info-kunci">${ikonGembok()}<span><b>${esc(U.LOC[n + 1])}</b> masih dikunci. Gurumu akan membukanya saat pelajaran berikutnya.</span></p>` : ''}
+    <div class="row">${kelasMode() ? '<button class="btn alt" id="lp">Papan peringkat</button>' : ''}<button class="btn alt" id="kp">Ke peta</button>${lanjut}</div>`, 560);
+  c.querySelector('#kp').onclick = () => { G.nilaiTerakhir = null; closeCard(); openMap(); };
+  const lp = c.querySelector('#lp'); if (lp) lp.onclick = () => { papanCard(); };
+  const nx = c.querySelector('#nx');
+  if (nx) nx.onclick = () => { G.nilaiTerakhir = null; closeCard(); if (!akhir) openMap(n + 1); else { openMap(); hasilAkhir(false); } };
+}
+const ikonGembok = () => '<svg viewBox="0 0 24 24" class="gembok" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.2" fill="currentColor"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>';
 
 /* =================== PETA =================== */
-const PTS = [[120, 470], [300, 380], [470, 250], [650, 360], [800, 200]];
-const SEG = ['', 'M120 470Q200 470 300 380', 'M300 380Q360 250 470 250', 'M470 250Q580 250 650 360', 'M650 360Q760 360 800 200'];
+const PTS = [[120, 470], [300, 380], [500, 250], [790, 250]];
+const SEG = ['', 'M120 470Q200 470 300 380', 'M300 380Q370 250 500 250', 'M500 250Q650 345 790 250'];
 function bangunan(n) {
   const rumah = (roof) => `<rect x="-38" y="-30" width="76" height="46" fill="#E4B37A" stroke="#8E5A36" stroke-width="3"/><path d="M-48 -28L0 -62L48 -28Z" fill="${roof}" stroke="#6E2616" stroke-width="3"/><rect x="-10" y="-8" width="20" height="24" fill="#6B4228"/><rect x="-30" y="-20" width="14" height="12" fill="#BFE3F0" stroke="#6B4228" stroke-width="2"/><rect x="16" y="-20" width="14" height="12" fill="#BFE3F0" stroke="#6B4228" stroke-width="2"/>`;
   if (n === 1) return rumah('#B8321F') + `<rect x="-26" y="-4" width="12" height="18" fill="url(#pMerah)"/>`;
   if (n === 2) return `<rect x="20" y="-72" width="12" height="30" fill="#6B4228"/>` + rumah('#8E5A36') + `<g fill="#fff" opacity=".7"><circle class="steam" cx="26" cy="-82" r="7"/><circle class="steam d2" cx="30" cy="-92" r="9"/></g>`;
-  if (n === 3) return `<path d="M-50 16V-44M50 16V-44" stroke="#6B4228" stroke-width="5"/><path d="M-50 -40Q0 -26 50 -40" stroke="#5A3E2B" stroke-width="2" fill="none"/><rect x="-42" y="-36" width="24" height="34" fill="url(#pMerah)"/><rect x="-12" y="-32" width="24" height="34" fill="url(#pKuning)"/><rect x="18" y="-36" width="24" height="34" fill="url(#pBiru)"/><ellipse cx="0" cy="12" rx="20" ry="6" fill="#B8321F" stroke="#6B4228" stroke-width="3"/>`;
-  return `<rect x="-54" y="-34" width="108" height="50" fill="#F3E3C3" stroke="#8E5A36" stroke-width="3"/><path d="M-62 -32L0 -64L62 -32Z" fill="#3E8E4F" stroke="#235C31" stroke-width="3"/><g fill="#C9A06A"><rect x="-44" y="-30" width="8" height="46"/><rect x="-18" y="-30" width="8" height="46"/><rect x="10" y="-30" width="8" height="46"/><rect x="36" y="-30" width="8" height="46"/></g><rect x="-10" y="-50" width="20" height="14" fill="url(#pKuning)"/>`;
+  return `<path d="M-50 16V-44M50 16V-44" stroke="#6B4228" stroke-width="5"/><path d="M-50 -40Q0 -26 50 -40" stroke="#5A3E2B" stroke-width="2" fill="none"/><rect x="-42" y="-36" width="24" height="34" fill="url(#pMerah)"/><rect x="-12" y="-32" width="24" height="34" fill="url(#pKuning)"/><rect x="18" y="-36" width="24" height="34" fill="url(#pBiru)"/><ellipse cx="0" cy="12" rx="20" ry="6" fill="#B8321F" stroke="#6B4228" stroke-width="3"/>`;
 }
+const NP = () => (U && U.JUMLAH_PERTEMUAN) || 3;
 const levelSelesai = (n) => !!(G.aku && G.aku.level[n] && G.aku.level[n].selesai);
-const dimainkan = (n) => n <= (G.sesi ? G.sesi.sampaiLevel : 4);
-const terbuka = (n) => dimainkan(n) && (n === 1 || levelSelesai(n - 1));
+const kunciGuru = (n) => kelasMode() && n > ((G.sesi && G.sesi.buka) || 1);
+const terbuka = (n) => !kunciGuru(n) && (n === 1 || levelSelesai(n - 1));
+const progres = (n) => (G.aku && G.aku.progres && G.aku.progres[n]) || 0;
 function mapSVG() {
   let tebu = ''; for (let i = 0; i < 11; i++) tebu += `<rect x="${40 + i * 17}" y="150" width="9" height="${90 + (i % 3) * 10}" rx="4" fill="${i % 2 ? '#6FA25A' : '#7DB368'}"/>`;
   let tambak = ''; for (let r = 0; r < 2; r++) for (let k = 0; k < 3; k++) tambak += `<rect x="${470 + k * 70}" y="${438 + r * 48}" width="62" height="40" fill="url(#gWater)" stroke="#C9A06A" stroke-width="5"/>`;
-  let trees = ''; [[60, 330], [210, 300], [380, 470], [560, 170], [720, 480], [890, 340], [900, 470], [620, 110], [330, 130], [400, 340]].forEach(([x, y], i) => { trees += GB.pohon(x, y, 0.45 + (i % 3) * 0.08, i % 2 ? '#5E8C55' : '#6E9E5E'); });
+  let trees = ''; [[60, 330], [210, 300], [380, 470], [640, 160], [720, 480], [900, 360], [900, 470], [380, 130], [420, 360], [650, 420]].forEach(([x, y], i) => { trees += GB.pohon(x, y, 0.45 + (i % 3) * 0.08, i % 2 ? '#5E8C55' : '#6E9E5E'); });
   let nodes = '';
-  for (let n = 1; n <= 4; n++) {
-    const [x, y] = PTS[n]; const lock = !terbuka(n), done = levelSelesai(n); const lab = U.LOC[n]; const w = lab.length * 9 + 28;
-    nodes += `<g class="node ${lock ? 'locked' : ''}" data-l="${n}" tabindex="0" role="button" aria-label="${lab}${lock ? ' (terkunci)' : ''}" transform="translate(${x} ${y})">
+  const F = `font-family="'Baloo 2',sans-serif" font-weight="800" text-anchor="middle"`;
+  for (let n = 1; n <= NP(); n++) {
+    const [x, y] = PTS[n]; const guru = kunciGuru(n), lock = !terbuka(n), done = levelSelesai(n); const lab = U.LOC[n]; const w = lab.length * 9 + 30;
+    let bawah = '';
+    if (done) bawah = `<g transform="translate(-27 54)">${[0, 1, 2].map((i) => `<path transform="translate(${i * 18} 0) scale(.75)" d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="${i < (G.aku.level[n].bintang || 0) ? '#F2B632' : '#E3D2AE'}" stroke="#8E5A36" stroke-width="1"/>`).join('')}</g><rect x="-36" y="74" width="72" height="22" rx="11" fill="#3E8E4F"/><text y="90" ${F} font-size="14" fill="#fff">Nilai ${G.aku.level[n].nilai}</text>`;
+    else if (guru) bawah = `<rect x="-52" y="54" width="104" height="22" rx="11" fill="#6B6B6B"/><text y="70" ${F} font-size="13" fill="#fff">Dikunci guru</text>`;
+    else if (!lock && progres(n) > 0) bawah = `<rect x="-40" y="54" width="80" height="22" rx="11" fill="#F2B632"/><text y="70" ${F} font-size="13" fill="#2A1A10">${progres(n)}/${U.JUMLAH[n]} soal</text>`;
+    nodes += `<g class="node ${lock ? 'locked' : ''}" data-l="${n}" tabindex="0" role="button" aria-label="${lab}: ${esc(U.TOPIK[n])}${guru ? ' (dikunci guru)' : lock ? ' (terkunci)' : done ? ' (selesai)' : ''}" transform="translate(${x} ${y})">
     <g class="bld" transform="translate(0 -34)">${bangunan(n)}</g>
     <circle class="ring" r="15" fill="${done ? '#3E8E4F' : '#fff'}" stroke="${lock ? '#8A8A8A' : '#B8321F'}" stroke-width="4"/>
-    ${lock ? '<path d="M-6 -1h12v9h-12z" fill="#6B6B6B"/><path d="M-4 -1v-4a4 4 0 0 1 8 0v4" stroke="#6B6B6B" stroke-width="2.4" fill="none"/>' : done ? '<path d="M-7 0l5 5 9-10" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' : `<text y="6" text-anchor="middle" font-family="'Baloo 2',sans-serif" font-weight="800" font-size="17" fill="#B8321F">${n}</text>`}
-    <rect x="${-w / 2}" y="22" width="${w}" height="26" rx="13" fill="rgba(42,26,16,.82)"/><text y="41" text-anchor="middle" font-family="'Baloo 2',sans-serif" font-weight="700" font-size="16" fill="#FFE7A8">${lab}</text>
-    ${done ? `<g transform="translate(-27 54)">${[0, 1, 2].map((i) => `<path transform="translate(${i * 18} 0) scale(.75)" d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z" fill="${i < (G.aku.level[n].bintang || 0) ? '#F2B632' : '#E3D2AE'}" stroke="#8E5A36" stroke-width="1"/>`).join('')}</g>` : ''}
-    ${!dimainkan(n) ? `<text y="72" text-anchor="middle" font-family="'Baloo 2',sans-serif" font-weight="700" font-size="13" fill="#2A1A10">Tidak dimainkan</text>` : ''}</g>`;
+    ${lock ? '<path d="M-6 -1h12v9h-12z" fill="#6B6B6B"/><path d="M-4 -1v-4a4 4 0 0 1 8 0v4" stroke="#6B6B6B" stroke-width="2.4" fill="none"/>' : done ? '<path d="M-7 0l5 5 9-10" stroke="#fff" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' : `<text y="6" ${F} font-size="17" fill="#B8321F">${n}</text>`}
+    <rect x="${-w / 2}" y="22" width="${w}" height="26" rx="13" fill="rgba(42,26,16,.85)"/><text y="41" ${F} font-size="16" fill="#FFE7A8">${lab}</text>
+    ${bawah}</g>`;
   }
   const g = gender();
   const tokHair = g === 'p' ? `<path d="M-11 -2Q-12 -16 0 -16Q12 -16 11 -2Q8 -9 0 -9Q-8 -9 -11 -2Z" fill="${RAMBUT}"/><ellipse cx="12" cy="0" rx="4" ry="8" fill="${RAMBUT}"/>` : `<path d="M-11 -2Q-12 -16 0 -16Q12 -16 11 -2Q8 -9 0 -9Q-8 -9 -11 -2Z" fill="${RAMBUT}"/><path d="M-11 -7Q0 -13 11 -7V-4Q0 -10 -11 -4Z" fill="#F2B632"/>`;
   const [tx, ty] = PTS[G.at || 0] || PTS[0];
+  const jalur = SEG.slice(1).map((d, i) => (i ? d.replace(/^M[\d. ]+/, '') : d)).join('');
   return `<svg id="mapSvg" viewBox="0 0 960 540" preserveAspectRatio="xMidYMid slice" aria-label="Peta Kampoeng Batik Jetis">
   <rect width="960" height="540" fill="#A7CF84"/><path d="M0 60Q200 30 360 90T700 70T960 90V0H0Z" fill="#8DBE6E"/>
   <path d="M-10 70Q200 40 380 100T720 80T970 104" stroke="url(#gWater)" stroke-width="44" fill="none"/><path d="M60 64q20-6 40 0M420 96q20-6 40 0M780 84q20-6 40 0" stroke="#fff" stroke-width="3" opacity=".6" fill="none"/>
   <g>${tebu}</g><text x="130" y="276" text-anchor="middle" font-family="'Baloo 2',sans-serif" font-weight="700" font-size="15" fill="#2F5A2A">Kebun tebu</text>
   <g>${tambak}</g><text x="572" y="532" text-anchor="middle" font-family="'Baloo 2',sans-serif" font-weight="700" font-size="15" fill="#1E4E66">Tambak bandeng &amp; udang</text>
   ${trees}
-  <path d="M120 470Q200 470 300 380Q360 250 470 250Q580 250 650 360Q760 360 800 200" stroke="#E6C58C" stroke-width="30" fill="none" stroke-linecap="round"/>
-  <path d="M120 470Q200 470 300 380Q360 250 470 250Q580 250 650 360Q760 360 800 200" stroke="#F6E2B4" stroke-width="4" stroke-dasharray="10 12" fill="none"/>
+  <path d="${jalur}" stroke="#E6C58C" stroke-width="30" fill="none" stroke-linecap="round"/>
+  <path d="${jalur}" stroke="#F6E2B4" stroke-width="4" stroke-dasharray="10 12" fill="none"/>
   ${SEG.slice(1).map((d, i) => `<path id="seg${i + 1}" d="${d}" fill="none"/>`).join('')}
   ${gapuraMini()}
   ${nodes}
@@ -467,24 +477,29 @@ function mapSVG() {
 }
 let walkingMap = false;
 function openMap(autoLevel) {
-  runId++; lv = null; dlgResolve = null; hentikanTimer(); show('scrMap'); closeCard();
-  if (G.at === undefined) { G.at = 0; for (let n = 1; n <= 4; n++) if (levelSelesai(n)) G.at = n; }
-  $('#mapWrap').innerHTML = mapSVG();
+  runId++; lv = null; dlgResolve = null; show('scrMap'); closeCard(); closeOptions();
+  if (G.at === undefined) { G.at = 0; for (let n = 1; n <= NP(); n++) if (levelSelesai(n)) G.at = n; }
+  gambarPeta();
   $('#mapName').innerHTML = `<svg viewBox="0 0 24 24" width="1.1em" height="1.1em"><circle cx="12" cy="8" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>${esc(nama())}${kelasMode() ? ` · ${esc(G.sesi.kelasNama)}` : ''}`;
-  $('#mapPoin').textContent = `${angka(G.aku.skor)} poin`;
+  $('#mapPoin').textContent = `Skor ${angka(G.aku.skor)}`;
   $('#btnPapan').hidden = !kelasMode();
   updRank();
+  if (autoLevel) setTimeout(() => nodeClick(autoLevel), 350);
+}
+/** Menggambar ulang peta (mis. saat guru membuka/mengunci pertemuan) tanpa memindahkan layar. */
+function gambarPeta() {
+  if (walkingMap) return;
+  $('#mapWrap').innerHTML = mapSVG();
   $('#kainMini').innerHTML = kainSVG();
   document.querySelectorAll('.node').forEach((el) => {
     const go = () => nodeClick(+el.dataset.l); el.addEventListener('click', go);
     el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
   });
-  if (autoLevel) setTimeout(() => nodeClick(autoLevel), 350);
 }
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600); }
+function toast(msg, lama) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, lama || 2800); }
 async function nodeClick(n) {
   if (walkingMap) return; initAudio();
-  if (!dimainkan(n)) { sfx('salah'); toast('Misi ini tidak dimainkan di kelasmu.'); return; }
+  if (kunciGuru(n)) { sfx('salah'); toast(`${U.LOC[n]} masih dikunci. Tunggu gurumu membukanya.`); return; }
   if (!terbuka(n)) { sfx('salah'); toast(`Selesaikan ${U.LOC[n - 1]} dulu, ya.`); return; }
   sfx('klik'); walkingMap = true; await walkToken(n); walkingMap = false; missionCard(n);
 }
@@ -493,20 +508,25 @@ function walkToken(to) {
     const tok = document.getElementById('token'); const from = G.at || 0; if (from === to || !tok) { G.at = to; res(); return; }
     const dir = to > from ? 1 : -1; tok.classList.add('walking');
     for (let i = from; i !== to; i += dir) {
-      const seg = document.getElementById('seg' + (dir > 0 ? i + 1 : i)); const Lh = seg.getTotalLength(); const dur = RM ? 60 : Lh / 260 * 1000;
+      const seg = document.getElementById('seg' + (dir > 0 ? i + 1 : i)); if (!seg) break; const Lh = seg.getTotalLength(); const dur = RM ? 60 : Lh / 260 * 1000;
       await new Promise((r) => { const t0 = performance.now(); let lastStep = 0; const f = (now) => { const k = Math.min(1, (now - t0) / dur); const p = seg.getPointAtLength(dir > 0 ? k * Lh : (1 - k) * Lh); tok.setAttribute('transform', `translate(${p.x} ${p.y})`); if (now - lastStep > 260) { sfx('langkah'); lastStep = now; } k < 1 ? requestAnimationFrame(f) : r(); }; requestAnimationFrame(f); });
     }
     tok.classList.remove('walking'); G.at = to; res();
   });
 }
 function missionCard(n) {
-  const done = levelSelesai(n); const kunci = done && kelasMode();
+  const done = levelSelesai(n); const tutupSaja = done && kelasMode(); const pr = progres(n);
+  const tombol = tutupSaja ? '<button class="btn alt" id="mulai">Tutup</button>'
+    : `<button class="btn kuning" id="mulai">${done ? 'Ulangi (latihan)' : pr > 0 ? `Lanjutkan (${pr}/${U.JUMLAH[n]} terjawab)` : 'Mulai'}</button>`;
   const c = card(`<button class="round merah x" id="tutup" aria-label="Tutup"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/></svg></button>
-  <h3 class="big">${esc(U.LOC[n])}</h3><div class="chiprow"><span class="tag">Misi</span><span class="tag k">Level ${n}: ${U.DIFF[n]}</span><span class="tag">${U.JUMLAH[n]} tantangan</span></div>
-  <p>${esc(U.MISI[n])}</p>${done ? `<div class="stars">${[1, 2, 3].map((i) => starSVG(i <= (G.aku.level[n].bintang || 0))).join('')}</div><p>Poin dari misi ini: <b>${angka(G.aku.level[n].poin)}</b></p>` : ''}
-  <div class="row">${kunci ? '<button class="btn alt" id="mulai">Tutup</button>' : `<button class="btn kuning" id="mulai">${done ? 'Main lagi (latihan)' : 'Mulai'}</button>`}</div>`, 480);
+  <h3 class="big">${esc(U.LOC[n])}</h3><p class="sub-big">${esc(U.TOPIK[n])}</p>
+  <div class="chiprow"><span class="tag">${U.JUMLAH[n]} soal pilihan ganda</span><span class="tag k">${esc(U.RANAH[n])}</span><span class="tag">Benar = ${U.NILAI_PER_SOAL} poin</span></div>
+  ${done ? `<div class="stars">${[1, 2, 3].map((i) => starSVG(i <= (G.aku.level[n].bintang || 0))).join('')}</div><p>Nilaimu: <b>${G.aku.level[n].nilai}</b> (${G.aku.level[n].benar} dari ${G.aku.level[n].soal} benar)${tutupSaja ? '. Pertemuan ini sudah selesai.' : ''}</p>`
+    : `<p class="kecil-kiri">Kamu akan belajar:</p><ul class="learn">${(U.INDIKATOR[n] || []).map((x) => `<li>${esc(x.replace(/\s*\(C\d\)\s*$/, ''))}</li>`).join('')}</ul><p class="kecil">Setiap soal hanya bisa dijawab satu kali. Kamu boleh keluar dan melanjutkan nanti.</p>`}
+  ${done && !tutupSaja ? '<p class="kecil">Mengulang akan menghapus jawaban latihan sebelumnya untuk pertemuan ini.</p>' : ''}
+  <div class="row">${tombol}</div>`, 520);
   c.querySelector('#tutup').onclick = closeCard;
-  c.querySelector('#mulai').onclick = () => { closeCard(); if (kunci) return; sfx('klik'); playLevel(n); };
+  c.querySelector('#mulai').onclick = () => { closeCard(); if (tutupSaja) return; sfx('klik'); playLevel(n); };
   c.querySelector('#mulai').focus({ preventScroll: true });
 }
 
@@ -520,11 +540,13 @@ function podium(list) {
   return `<div class="podium">${t.map((p, i) => p ? `<div class="pod ${cls[i]}">${kepala(p.g)}<span class="nm">${esc(p.nama)}</span><span class="sk">${angka(p.skor)}</span><div class="blok">${no[i]}</div></div>` : '<div></div>').join('')}</div>`;
 }
 function papanCard() {
+  const dariSkor = G.kartu === 'skor' || (G.kartu === 'papan' && papanCard.dariSkor);
+  papanCard.dariSkor = dariSkor;
   G.kartu = 'papan'; const L = G.papan;
   const c = card(`<button class="round merah x" id="tutup" aria-label="Tutup"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/></svg></button>
    <span class="ttl">Papan peringkat</span><p>${esc(G.sesi.kelasNama)}: ${L.length} pemain. Diperbarui langsung setiap ada jawaban.</p>
    ${podium(L)}${barisPapan(L, true)}`, 520);
-  c.querySelector('#tutup').onclick = closeCard;
+  c.querySelector('#tutup').onclick = () => { closeCard(); if (dariSkor && G.nilaiTerakhir) skorCard(); };
 }
 function lobbyCard() {
   G.kartu = 'lobi'; show('scrTitle'); renderTitleBg(); $('#titlePanel').hidden = true;
@@ -538,34 +560,35 @@ function lobbyCard() {
 function hasilAkhir(dariGuru) {
   G.kartu = 'akhir'; const L = G.papan; const i = L.findIndex((p) => G.aku && p.id === G.aku.id); const aku = L[i] || { skor: G.aku.skor, akurasi: 0 };
   const kelas = kelasMode();
-  const judul = dariGuru ? 'Permainan selesai' : (kelas ? 'Kamu menyelesaikan semua misi!' : 'Latihan selesai');
+  const judul = dariGuru ? 'Permainan ditutup guru' : (kelas ? 'Kamu menyelesaikan semua pertemuan!' : 'Latihan selesai');
+  const perP = `<div class="saya">${[1, 2, 3].map((n) => `<div><b>${levelSelesai(n) ? G.aku.level[n].nilai : '–'}</b><span>${esc(U.LOC[n])}</span></div>`).join('')}</div>`;
   const isi = kelas
-    ? `<div class="saya"><div><b>#${i + 1}</b><span>dari ${L.length} pemain</span></div><div><b>${angka(aku.skor)}</b><span>poin</span></div><div><b>${aku.akurasi}%</b><span>benar di percobaan pertama</span></div></div>${podium(L)}${barisPapan(L, true)}
-       ${!dariGuru ? '<p style="margin-top:.6em">Papan ini terus berubah sampai guru mengakhiri permainan.</p>' : ''}`
-    : `<div class="saya"><div><b>${angka(G.aku.skor)}</b><span>poin</span></div></div><div class="kain-big">${kainSVG()}</div>`;
+    ? `<div class="saya"><div><b>#${i + 1}</b><span>dari ${L.length} siswa</span></div><div><b>${angka(aku.skor)}</b><span>skor total</span></div><div><b>${aku.akurasi}%</b><span>jawaban benar</span></div></div>${perP}${podium(L)}${barisPapan(L, true)}
+       ${!dariGuru ? '<p style="margin-top:.6em">Papan ini terus berubah sampai semua temanmu selesai.</p>' : ''}`
+    : `<div class="saya"><div><b>${angka(G.aku.skor)}</b><span>skor total</span></div></div>${perP}<div class="kain-big">${kainSVG()}</div>`;
   const c = card(`<span class="ttl">${judul}</span>${kelas ? `<h3 class="big">${esc(G.sesi.kelasNama)}</h3>` : `<h3 class="big">${esc(nama())}</h3>`}${isi}
     <div class="row">${!dariGuru ? '<button class="btn alt" id="kp">Ke peta</button>' : ''}<button class="btn merah" id="kel">Keluar</button></div>`, 560);
   const kp = c.querySelector('#kp'); if (kp) kp.onclick = closeCard;
   c.querySelector('#kel').onclick = () => { API.keluar(); G.sesi = null; G.aku = null; openTitle(); };
 }
 function selesaiDariGuru() {
-  if (!G.sesi) return; G.sesi.status = 'selesai'; runId++; closeOptions(); hentikanTimer(); $('#dlg').hidden = true;
+  if (!G.sesi) return; G.sesi.status = 'selesai'; runId++; closeOptions(); $('#dlg').hidden = true;
   if ($('#scrMap').hidden) openMap(); hasilAkhir(true);
 }
 
 /* =================== KAIN =================== */
 function kainSVG() {
-  const P = [[1, 'pKuning', 'kembang'], [2, 'pMerah', 'beras'], [3, 'pBiru', 'bandeng'], [4, 'pHijau', 'udang']];
-  let s = '<svg viewBox="0 0 200 140" aria-hidden="true"><rect width="200" height="140" rx="6" fill="#FFFDF6"/><rect x="0" y="0" width="200" height="10" fill="url(#pHijau)"/><rect x="0" y="130" width="200" height="10" fill="url(#pHijau)"/>';
+  const P = [[1, 'pKuning', 'kembang'], [2, 'pMerah', 'beras'], [3, 'pBiru', 'bandeng']];
+  let s = '<svg viewBox="0 0 200 110" aria-hidden="true"><rect width="200" height="110" rx="6" fill="#FFFDF6"/><rect x="0" y="0" width="200" height="10" fill="url(#pHijau)"/><rect x="0" y="100" width="200" height="10" fill="url(#pHijau)"/>';
   P.forEach(([n, p, m], i) => {
-    const x = 8 + (i % 2) * 96, y = 16 + Math.floor(i / 2) * 58; const done = levelSelesai(n);
-    s += done ? `<rect x="${x}" y="${y}" width="88" height="52" rx="4" fill="url(#${p})"/><circle cx="${x + 44}" cy="${y + 26}" r="21" fill="#FFF6E4" opacity=".92"/><g transform="translate(${x + 27} ${y + 9}) scale(.53)">${IC[m]}</g>`
-      : `<rect x="${x}" y="${y}" width="88" height="52" rx="4" fill="url(#pPensil)" stroke="#CDBB98" stroke-dasharray="4 3"/><g transform="translate(${x + 27} ${y + 9}) scale(.53)" opacity=".25" filter="url(#fGrey)">${IC[m]}</g>`;
+    const x = 7 + i * 63, y = 17; const done = levelSelesai(n);
+    s += done ? `<rect x="${x}" y="${y}" width="60" height="76" rx="4" fill="url(#${p})"/><circle cx="${x + 30}" cy="${y + 38}" r="21" fill="#FFF6E4" opacity=".92"/><g transform="translate(${x + 13} ${y + 21}) scale(.53)">${IC[m]}</g>`
+      : `<rect x="${x}" y="${y}" width="60" height="76" rx="4" fill="url(#pPensil)" stroke="#CDBB98" stroke-dasharray="4 3"/><g transform="translate(${x + 13} ${y + 21}) scale(.53)" opacity=".25" filter="url(#fGrey)">${IC[m]}</g>`;
   });
   return s + '</svg>';
 }
 function kainCard() {
-  const c = card(`<span class="ttl">Kain batikmu</span><p>Setiap misi yang selesai menambah satu motif di kainmu.</p><div class="kain-big">${kainSVG()}</div><div class="row"><button class="btn alt" id="tt">Tutup</button></div>`, 480);
+  const c = card(`<span class="ttl">Kain batikmu</span><p>Setiap pertemuan yang selesai menambah satu motif di kainmu.</p><div class="kain-big">${kainSVG()}</div><div class="row"><button class="btn alt" id="tt">Tutup</button></div>`, 480);
   c.querySelector('#tt').onclick = closeCard;
 }
 
@@ -573,11 +596,11 @@ function kainCard() {
 function renderTitleBg() { const b = $('#titleBg'); if (!b.firstChild) { b.innerHTML = `<div class="bgl">${BG.gapura()}</div>`; matikanSMIL(b); } }
 function kodeDariURL() { try { return (new URLSearchParams(location.search).get('kode') || '').replace(/\D/g, '').slice(0, 6); } catch (e) { return ''; } }
 function openTitle(kodeAwal) {
-  runId++; lv = null; dlgResolve = null; closeCard(); hentikanTimer(); show('scrTitle'); renderTitleBg();
+  runId++; lv = null; dlgResolve = null; closeCard(); show('scrTitle'); renderTitleBg();
   const panel = $('#titlePanel'); panel.hidden = false;
   const saved = API.tersimpan();
   if (!ONLINE) {
-    panel.innerHTML = `<p class="lead">Jelajahi Kampoeng Batik Jetis dan kumpulkan poin dari setiap jawaban benar.</p>
+    panel.innerHTML = `<p class="lead">Jelajahi Kampoeng Batik Jetis dan kerjakan tiga pertemuan IPA tentang zat dan perubahannya.</p>
       <div class="links">${saved ? '<button class="btn kuning" id="tLanjut">Lanjutkan</button><button class="btn alt" id="tBaru">Mulai dari awal</button>' : '<button class="btn kuning" id="tLatihan">Mulai bermain</button>'}<button class="btn alt" id="tSet">Pengaturan</button></div>
       <p class="small">Ini pratinjau satu pemain. Kode kelas dan papan peringkat bersama berjalan di versi server.</p>`;
   } else {
@@ -593,7 +616,7 @@ function openTitle(kodeAwal) {
   on('tLatihan', () => nameCard('latihan'));
   on('tSet', settingsCard);
   on('tLanjut', lanjutkan);
-  on('tBaru', () => konfirmasi('Mulai dari awal?', 'Poin dan misi yang sudah selesai di perangkat ini akan dihapus.', 'Hapus dan mulai', () => { API.keluar(); openTitle(); }));
+  on('tBaru', () => konfirmasi('Mulai dari awal?', 'Skor dan pertemuan yang sudah selesai di perangkat ini akan dihapus.', 'Hapus dan mulai', () => { API.keluar(); openTitle(); }));
   on('tLupa', () => { API.keluar(); openTitle(); });
 }
 async function lanjutkan() {
@@ -614,21 +637,35 @@ function nameCard(mode, pin) {
    <span class="ttl">Nama</span><input class="field" id="inpNama" maxlength="16" autocomplete="off" placeholder="Tulis namamu" aria-label="Nama">
    <span class="ttl" style="margin-top:.8em">Pilih avatarmu</span>
    <div class="avas"><button class="ava" data-g="p" aria-pressed="true">${muka('p')}Anak perempuan</button><button class="ava" data-g="l" aria-pressed="false">${muka('l')}Anak laki-laki</button></div>
-   <div class="fb no" id="fb" aria-live="polite"></div><div class="row"><button class="btn" id="ok">${mode === 'kelas' ? 'Masuk kelas' : 'Mulai petualangan'}</button></div>`, 460);
+   <div class="fb no" id="fb" aria-live="polite"></div><div class="nama-ada" id="namaAda" hidden></div><div class="row"><button class="btn" id="ok">${mode === 'kelas' ? 'Masuk kelas' : 'Mulai petualangan'}</button></div>`, 460);
   c.querySelector('#tutup').onclick = closeCard;
   c.querySelectorAll('.ava').forEach((b) => { b.onclick = () => { g = b.dataset.g; sfx('klik'); c.querySelectorAll('.ava').forEach((x) => x.setAttribute('aria-pressed', x === b)); }; });
   const inp = c.querySelector('#inpNama'); inp.focus();
   inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') c.querySelector('#ok').click(); });
   let sibuk = false;
-  c.querySelector('#ok').onclick = async () => {
+  const kirimNama = async (tambahan) => {
     if (sibuk) return; const fb = c.querySelector('#fb'); const v = inp.value.trim();
     if (!v) { fb.textContent = 'Tulis namamu dulu, ya.'; inp.focus(); return; }
     sibuk = true; fb.textContent = '';
-    let r; try { r = mode === 'kelas' ? await API.gabung({ pin, nama: v, g }) : await API.latihan({ nama: v, g }); } catch (e) { r = { ok: false, err: 'Tidak bisa terhubung ke server. Periksa internet, lalu coba lagi.' }; }
+    let r; try { r = mode === 'kelas' ? await API.gabung(Object.assign({ pin, nama: v, g }, tambahan)) : await API.latihan({ nama: v, g }); } catch (e) { r = { ok: false, err: 'Tidak bisa terhubung ke server. Periksa internet, lalu coba lagi.' }; }
     sibuk = false;
+    if (r.kode === 'namaAda') { tanyaNama(r); return; }
     if (!r.ok) { fb.textContent = r.err; return; }
     closeCard(); sfx('benar'); masuk(r.sesi);
   };
+  /* Nama sudah ada di kelas: bisa jadi siswa yang sama di perangkat lain (lanjutkan), atau siswa lain dengan nama sama. */
+  const tanyaNama = (r) => {
+    const kotak = c.querySelector('#namaAda');
+    kotak.hidden = false;
+    kotak.innerHTML = `<p><b>Nama "${esc(r.nama)}" sudah ada di kelas ini</b>${r.misi ? ` (sudah menyelesaikan ${r.misi} pertemuan, skor ${angka(r.skor)})` : ''}. Apakah itu kamu?</p>
+      <div class="row"><button class="btn" id="yaAku">Ya, itu aku. Lanjutkan</button><button class="btn alt" id="bukan">Bukan, aku siswa lain</button></div>`;
+    c.querySelector('#ok').hidden = true;
+    kotak.querySelector('#yaAku').onclick = () => kirimNama({ lanjut: true });
+    kotak.querySelector('#bukan').onclick = () => kirimNama({ baru: true });
+    kotak.querySelector('#yaAku').focus();
+  };
+  inp.addEventListener('input', () => { const k = c.querySelector('#namaAda'); if (!k.hidden) { k.hidden = true; c.querySelector('#ok').hidden = false; } });
+  c.querySelector('#ok').onclick = () => kirimNama({});
 }
 function masuk(sesi) {
   G.sesi = sesi; G.aku = sesi.pemain; G.papan = sesi.papan || []; G.at = undefined; initAudio();
@@ -636,7 +673,7 @@ function masuk(sesi) {
   if (ONLINE && sesi.mode === 'kelas') { try { history.replaceState(null, '', '?kode=' + sesi.pin); } catch (e) {} }
   if (sesi.status === 'lobby') { lobbyCard(); return; }
   if (sesi.status === 'selesai') { openMap(); hasilAkhir(true); return; }
-  const adaProgres = Object.keys(G.aku.level || {}).length > 0;
+  const adaProgres = Object.keys(G.aku.level || {}).length > 0 || Object.values(G.aku.progres || {}).some((x) => x > 0);
   if (adaProgres || bacaJ(introKey())) masukGapura(); else playProlog();
 }
 function settingsCard() {
@@ -660,12 +697,23 @@ API.init({
   onStatus(s) {
     if (!G.sesi) return; const lama = G.sesi.status; G.sesi.status = s;
     if (s === 'main' && lama === 'lobby') { closeCard(); sfx('bintang'); playProlog(); }
+    if (s === 'main' && lama === 'selesai') { closeCard(); toast('Gurumu membuka kembali kelas ini.'); openMap(); }
     if (s === 'selesai') selesaiDariGuru();
   },
-  onSambung(sesi) { if (!G.sesi) return; G.sesi.status = sesi.status; G.papan = sesi.papan || G.papan; updRank(); },
+  onKunci(d) {
+    if (!G.sesi || !d) return; G.sesi.buka = d.buka;
+    if (d.naik) { sfx('bintang'); toast(`Gurumu membuka ${U.LOC[d.buka]}!`, 4000); }
+    else toast(`Gurumu mengunci kembali ${U.LOC[d.buka + 1]}.`, 4000);
+    if (!$('#scrMap').hidden) gambarPeta();
+    if (G.kartu === 'skor') skorCard();
+  },
+  onSambung(sesi) {
+    if (!G.sesi) return; const bukaLama = G.sesi.buka; G.sesi.status = sesi.status; G.sesi.buka = sesi.buka; G.papan = sesi.papan || G.papan; updRank();
+    if (bukaLama !== sesi.buka && !$('#scrMap').hidden) gambarPeta();
+  },
   onKoneksi(ok) { $('#koneksi').hidden = ok; },
   onDikeluarkan() {
-    runId++; closeOptions(); hentikanTimer(); G.sesi = null; G.aku = null; openTitle('');
+    runId++; closeOptions(); G.sesi = null; G.aku = null; openTitle('');
     const c = card(`<span class="ttl">Kamu dikeluarkan</span><p>Guru mengeluarkanmu dari kelas ini. Tanyakan kepada gurumu kalau ini keliru.</p><div class="row"><button class="btn" id="ok">Mengerti</button></div>`, 420);
     c.querySelector('#ok').onclick = closeCard;
   },
@@ -681,7 +729,7 @@ $('#btnSkip').onclick = (e) => { e.stopPropagation(); sfx('klik'); playIntro(); 
 $('#btnBack').onclick = (e) => {
   e.stopPropagation(); sfx('klik'); const mode = $('#scrScene').dataset.mode;
   if (mode !== 'level') { tulisJ(introKey(), 1); openMap(); return; }
-  const c = card(`<span class="ttl">Keluar dari misi?</span><p>Poin dari tantangan yang sudah kamu jawab tetap tersimpan. Kamu bisa melanjutkan misi ini dari peta.</p><div class="row"><button class="btn alt" id="tetap">Tetap main</button><button class="btn merah" id="keluar">Keluar ke peta</button></div>`, 440);
+  const c = card(`<span class="ttl">Keluar dari pertemuan?</span><p>Jawaban yang sudah kamu kunci tetap tersimpan. Kamu bisa melanjutkan pertemuan ini dari peta.</p><div class="row"><button class="btn alt" id="tetap">Tetap main</button><button class="btn merah" id="keluar">Keluar ke peta</button></div>`, 440);
   c.querySelector('#tetap').onclick = closeCard; c.querySelector('#keluar').onclick = () => { closeOptions(); $('#dlg').hidden = true; openMap(); };
 };
 $('#btnHome').onclick = () => { sfx('klik'); openTitle(); };
