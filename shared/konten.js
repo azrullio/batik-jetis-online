@@ -264,17 +264,12 @@
   ];
 
   const PROLOG = [
+    { t: 'bg', bg: 'gapura' },
+    { t: 'say', text: 'Batik Jetis merupakan salah satu contoh batik tradisional legendaris yang berpusat di Kampung Batik Jetis, Kelurahan Lemahputro, Kecamatan Sidoarjo, Kabupaten Sidoarjo.' },
     { t: 'bg', bg: 'joglo', fx: 'sepia' },
-    { t: 'say', text: 'Tahun 1675. Seorang keturunan bangsawan Kediri, yang dikenal warga sebagai Mbah Mulyadi, mengajari warga Kampung Jetis membatik.' },
-    { t: 'say', text: 'Dari tangan warga Jetis lahir motif-motif khas: beras utah, kembang bayem, dan kebun tebu.' },
-    { t: 'bg', bg: 'pasar' },
-    { t: 'say', text: 'Batik tulis Jetis disukai para pedagang di Pasar Jetis, terutama pedagang dari Madura. Warnanya berani: merah, kuning, hijau, dan biru.' },
-    { t: 'bg', bg: 'halaman', fx: 'kusam' },
-    { t: 'say', text: 'Tapi lama-lama banyak orang lupa. Motif asli Jetis jarang dibuat, bahkan sering disangka batik dari daerah lain.' },
-    { t: 'say', text: 'Sekarang makin sedikit anak yang tahu cara membatik, apalagi ilmu alam yang ada di baliknya.' },
-    { t: 'bg', bg: 'gapura', fx: 'fajar' },
-    { t: 'show', slot: 'L', who: 'anakP', cls: 'duoL' }, { t: 'show', slot: 'R', who: 'anakL', cls: 'duoR' },
-    { t: 'say', text: 'Tapi harapan belum hilang. Kampoeng Batik Jetis menunggu pembatik muda yang mau belajar dengan sabar dan teliti.' },
+    { t: 'say', text: 'Warisan budaya ini diperkirakan sudah ada sejak tahun 1675 yang mula-mula dipelopori oleh seorang tokoh bernama Mbah Mulyadi.' },
+    { t: 'bg', bg: 'galeri' },
+    { t: 'say', text: 'Batik Jetis memiliki ciri khas yang unik, yaitu perpaduan antara corak Madura dan daerah pesisiran yang didominasi oleh warna-warna berani dan mencolok seperti merah, biru, kuning, dan hijau di atas dasar warna gelap.' },
   ];
   const INTRO = [
     { t: 'walkin', bg: 'gapura' },
