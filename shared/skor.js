@@ -1,8 +1,8 @@
 /*
  * Sistem nilai Petualangan Batik Jetis (sesuai instrumen: bobot 1 per soal).
  *  - Setiap soal hanya bisa dijawab SEKALI.
- *  - Jawaban benar = 10 poin, salah = 0. Satu pertemuan berisi 10 soal, jadi nilai pertemuan 0–100.
- *  - Skor total = jumlah nilai semua pertemuan (maksimal 300).
+ *  - Jawaban benar = 10 poin, salah = 0. Satu subbab berisi 10 soal, jadi nilai subbab 0–100.
+ *  - Skor total = jumlah nilai semua subbab (maksimal 300).
  *  - Jika skor sama, yang menjawab lebih cepat (total waktu lebih kecil) berada di atas.
  * Dipakai oleh server (versi online) dan oleh mode latihan offline.
  */
@@ -52,7 +52,7 @@
     return Object.assign({ ok: true }, p.level[n]);
   }
 
-  /** Mode latihan: menghapus jawaban satu pertemuan supaya bisa diulang. */
+  /** Mode latihan: menghapus jawaban satu subbab supaya bisa diulang. */
   function ulangLevel(p, n, ids) {
     ids.forEach((id) => {
       const s = p.soal[id]; if (!s) return;
@@ -63,7 +63,7 @@
     p.selesaiSemua = 0;
   }
 
-  /** Berapa soal sudah dijawab di satu pertemuan. */
+  /** Berapa soal sudah dijawab di satu subbab. */
   function progres(p, ids) { return ids.filter((id) => p.soal[id] && p.soal[id].dijawab).length; }
 
   /** Urutan papan peringkat: skor, lalu waktu total lebih cepat, lalu siapa yang lebih dulu mencapainya. */

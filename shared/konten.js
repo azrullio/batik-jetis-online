@@ -1,7 +1,7 @@
 /*
  * Konten cerita dan soal Petualangan Batik Jetis.
  * Sumber soal: Instrumen Latihan Soal Gamifikasi (revisi 6 Nov) — IPA SMP kelas VII,
- * 30 soal pilihan ganda dalam 3 pertemuan, bobot 1 per soal.
+ * 30 soal pilihan ganda dalam 3 subbab, bobot 1 per soal.
  *
  * File ini memegang KUNCI JAWABAN, jadi di versi online hanya dibaca server.
  * Klien hanya menerima versi yang sudah disaring lewat levelKlien().
@@ -21,8 +21,8 @@
   'use strict';
 
   const JUMLAH_PERTEMUAN = 3;
-  const NILAI_PER_SOAL = 10; // bobot 1 per soal -> 10 soal = nilai 100 per pertemuan
-  const LOC = ['', 'Pertemuan 1', 'Pertemuan 2', 'Pertemuan 3'];
+  const NILAI_PER_SOAL = 10; // bobot 1 per soal -> 10 soal = nilai 100 per subbab
+  const LOC = ['', 'Subbab 1', 'Subbab 2', 'Subbab 3'];
   const TOPIK = ['', 'Wujud Zat & Model Partikel', 'Perubahan Wujud Zat', 'Perubahan Fisika dan Kimia'];
   const TEMPAT = ['', 'Rumah Canting', 'Dapur Malam', 'Halaman Warna'];
   const RANAH = ['', 'C1–C2', 'C3–C4', 'C5–C6'];
@@ -38,7 +38,7 @@
 
   /* ===================== 30 SOAL ===================== */
   const SOAL = [
-    /* ---------- Pertemuan 1: Wujud Zat & Model Partikel ---------- */
+    /* ---------- Subbab 1: Wujud Zat & Model Partikel ---------- */
     { no: 1, p: 1, ranah: 'C1', kategori: 'LOTS',
       isi: ['Pada proses pewarnaan batik di Jetis Sidoarjo, pengrajin menggunakan bahan-bahan berikut:',
         { ol: ['Kain mori', 'Larutan pewarna', 'Air', 'Lilin batik (malam) yang sudah mengeras', 'Kayu penjepit kain'] }],
@@ -96,7 +96,7 @@
       opsi: ['Zat X = padat, Zat Y = cair, Zat Z = gas', 'Zat X = cair, Zat Y = padat, Zat Z = gas', 'Zat X = gas, Zat Y = cair, Zat Z = padat', 'Zat X = padat, Zat Y = gas, Zat Z = cair'], kunci: 'A',
       pembahasan: 'Zat X rapat dan hanya bergetar (padat), Zat Y berdekatan dan dapat bergeser (cair), Zat Z berjauhan dan bergerak bebas (gas).' },
 
-    /* ---------- Pertemuan 2: Perubahan Wujud Zat ---------- */
+    /* ---------- Subbab 2: Perubahan Wujud Zat ---------- */
     { no: 11, p: 2, ranah: 'C3', kategori: 'LOTS',
       isi: ['Bu Sari adalah pengrajin batik tulis di Kampoeng Batik Jetis Sidoarjo. Pagi itu ia menyiapkan malam untuk mencanting motif bunga pada kain mori. Malam ia letakkan dalam wajan kecil di atas kompor. Setelah 5 menit, malam di bagian dasar wajan sudah mencair, tetapi bagian atasnya masih padat. Ia mengambil canting dan mencelupkannya ke wajan. Ketika digoreskan ke kain, malam yang menempel di ujung canting cepat mengeras dan tidak bisa mengalir.'],
       tanya: 'Agar malam dapat digunakan untuk mencanting dengan lancar, tindakan yang paling tepat dilakukan Bu Sari adalah ....',
@@ -154,7 +154,7 @@
       opsi: ['Pada kegiatan I, malam menerima kalor, sedangkan pada kegiatan II, malam melepaskan kalor ke lingkungan.', 'Pada kegiatan I, malam melepaskan kalor, sedangkan pada kegiatan II, malam menerima kalor dari lingkungan.', 'Pada kegiatan I dan II, malam selalu menerima kalor karena mengalami perubahan wujud.', 'Pada kegiatan I dan II, malam selalu melepaskan kalor karena perubahan wujud terjadi akibat perubahan suhu.'], kunci: 'A',
       pembahasan: 'Saat mencair (kegiatan I) malam menerima kalor. Saat mengeras (kegiatan II) malam melepaskan kalor ke lingkungan. Arah perpindahan kalornya berbeda.' },
 
-    /* ---------- Pertemuan 3: Perubahan Fisika dan Kimia ---------- */
+    /* ---------- Subbab 3: Perubahan Fisika dan Kimia ---------- */
     { no: 21, p: 3, ranah: 'C5', kategori: 'HOTS',
       isi: ['Di ruang pewarnaan Batik Jetis, Adi melihat kain mori dicelupkan ke dalam larutan Napthol yang tidak berwarna (jernih). Setelah itu, kain diangkat dan dimasukkan ke dalam wadah berisi larutan Garam Diazonium. Seketika itu juga, muncul warna merah tua yang pekat dan melekat permanen pada kain.'],
       tanya: 'Berikan evaluasi Anda mengenai pengelompokan perubahan zat yang terjadi pada proses pewarnaan kain tersebut!',
@@ -226,18 +226,18 @@
   LEVEL[1] = [
     { t: 'walkin', bg: 'rumah' },
     { t: 'show', slot: 'R', who: 'sekar' },
-    { t: 'say', who: 'Sekar', text: 'Selamat datang di Pertemuan 1: Wujud Zat dan Model Partikel!' },
+    { t: 'say', who: 'Sekar', text: 'Selamat datang di Subbab 1: Wujud Zat dan Model Partikel!' },
     { t: 'say', who: 'Sekar', text: 'Di rumah pembatik ini ada kain mori, malam, larutan pewarna, dan air. Semuanya zat, tapi wujudnya berbeda-beda.' },
     { t: 'say', who: 'Sekar', text: 'Ada 10 soal. Setiap soal hanya bisa dijawab sekali, dan jawaban benar bernilai 10. Baca dengan teliti, ya!' },
     ...soalP(1, 1, 5),
     { t: 'say', who: 'Sekar', text: 'Separuh jalan! Sekarang kita lihat lebih dekat partikel penyusun zat.' },
     ...soalP(1, 6, 10),
-    { t: 'say', who: 'Sekar', text: 'Pertemuan 1 selesai, {nama}! Ayo lihat skormu.' },
+    { t: 'say', who: 'Sekar', text: 'Subbab 1 selesai, {nama}! Ayo lihat skormu.' },
   ];
   LEVEL[2] = [
     { t: 'walkin', bg: 'dapur' },
     { t: 'show', slot: 'R', who: 'sekar' },
-    { t: 'say', who: 'Sekar', text: 'Selamat datang di Pertemuan 2: Perubahan Wujud Zat!' },
+    { t: 'say', who: 'Sekar', text: 'Selamat datang di Subbab 2: Perubahan Wujud Zat!' },
     { t: 'say', who: 'Sekar', text: 'Di dapur malam ini, malam dipanaskan sampai mencair lalu membeku lagi di kain. Air pun bisa menguap.' },
     { t: 'show', slot: 'L', who: 'kilat' },
     { t: 'say', who: 'Si Kilat', text: 'Hehe, perubahan wujud itu gampang. Tebak saja jawabannya!' },
@@ -246,12 +246,12 @@
     ...soalP(2, 11, 15),
     { t: 'say', who: 'Sekar', text: 'Bagus! Sekarang soal-soalnya butuh analisis lebih dalam.' },
     ...soalP(2, 16, 20),
-    { t: 'say', who: 'Sekar', text: 'Pertemuan 2 selesai, {nama}! Ayo lihat skormu.' },
+    { t: 'say', who: 'Sekar', text: 'Subbab 2 selesai, {nama}! Ayo lihat skormu.' },
   ];
   LEVEL[3] = [
     { t: 'walkin', bg: 'halaman' },
     { t: 'show', slot: 'R', who: 'sekar' },
-    { t: 'say', who: 'Sekar', text: 'Selamat datang di Pertemuan 3: Perubahan Fisika dan Kimia!' },
+    { t: 'say', who: 'Sekar', text: 'Selamat datang di Subbab 3: Perubahan Fisika dan Kimia!' },
     { t: 'say', who: 'Sekar', text: 'Pertanyaan kuncinya satu: apakah terbentuk zat baru? Kalau tidak, itu perubahan fisika. Kalau ya, itu perubahan kimia.' },
     { t: 'show', slot: 'L', who: 'kilat' },
     { t: 'say', who: 'Si Kilat', text: 'Semua yang dipanaskan pasti perubahan kimia! Percaya deh.' },
@@ -260,7 +260,7 @@
     ...soalP(3, 21, 25),
     { t: 'say', who: 'Sekar', text: 'Separuh jalan! Sekarang giliranmu merancang pengelompokan.' },
     ...soalP(3, 26, 30),
-    { t: 'say', who: 'Sekar', text: 'Kamu sudah menyelesaikan ketiga pertemuan, {nama}! Ilmu membatik dan IPA-mu makin lengkap.' },
+    { t: 'say', who: 'Sekar', text: 'Kamu sudah menyelesaikan ketiga subbab, {nama}! Ilmu membatik dan IPA-mu makin lengkap.' },
   ];
 
   const PROLOG = [
@@ -285,8 +285,8 @@
     { t: 'say', who: 'Si Kilat', text: 'Hehehe... Untuk apa repot belajar? Aku punya banyak jalan pintas.' },
     HIDE('L'),
     { t: 'say', who: 'Sekar', text: 'Itu Si Kilat. Dia suka membujuk orang menebak asal-asalan. Hati-hati dengan bujukannya, ya.' },
-    { t: 'say', who: 'Sekar', text: 'Ada tiga pertemuan, masing-masing 10 soal. Setiap jawaban benar bernilai 10.' },
-    { t: 'say', who: 'Sekar', text: 'Pertemuan 1 bisa langsung dikerjakan. Pertemuan berikutnya terbuka setelah pertemuan sebelumnya selesai, dan di kelas, gurumu yang membukanya. Ayo, kita masuk lewat gapura!' },
+    { t: 'say', who: 'Sekar', text: 'Ada tiga subbab, masing-masing 10 soal. Setiap jawaban benar bernilai 10.' },
+    { t: 'say', who: 'Sekar', text: 'Subbab 1 bisa langsung dikerjakan. Subbab berikutnya terbuka setelah subbab sebelumnya selesai, dan di kelas, gurumu yang membukanya. Ayo, kita masuk lewat gapura!' },
   ];
 
   /* ===================== FUNGSI ===================== */
@@ -306,7 +306,7 @@
   function soalKlien(s) {
     return { t: 'soal', id: 's' + s.no, no: s.no, ranah: s.ranah, isi: salin(s.isi), tanya: s.tanya, opsi: s.opsi.slice() };
   }
-  /** Versi pertemuan untuk klien: tanpa kunci jawaban dan pembahasan. */
+  /** Versi subbab untuk klien: tanpa kunci jawaban dan pembahasan. */
   function levelKlien(n) {
     const L = LEVEL[n];
     if (!L) return null;

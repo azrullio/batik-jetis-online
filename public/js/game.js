@@ -399,7 +399,7 @@ async function finishLevel(n, my) {
   lv = null; updProg();
   skorCard();
 }
-/** Kartu nilai setelah satu pertemuan selesai. Ditampilkan ulang bila guru membuka pertemuan berikutnya. */
+/** Kartu nilai setelah satu subbab selesai. Ditampilkan ulang bila guru membuka subbab berikutnya. */
 function skorCard() {
   const T = G.nilaiTerakhir; if (!T) return; const { n, r } = T; G.kartu = 'skor'; $('#dlg').hidden = true; dlgResolve = null;
   const akhir = n >= U.JUMLAH_PERTEMUAN;
@@ -486,7 +486,7 @@ function openMap(autoLevel) {
   updRank();
   if (autoLevel) setTimeout(() => nodeClick(autoLevel), 350);
 }
-/** Menggambar ulang peta (mis. saat guru membuka/mengunci pertemuan) tanpa memindahkan layar. */
+/** Menggambar ulang peta (mis. saat guru membuka/mengunci subbab) tanpa memindahkan layar. */
 function gambarPeta() {
   if (walkingMap) return;
   $('#mapWrap').innerHTML = mapSVG();
@@ -521,9 +521,9 @@ function missionCard(n) {
   const c = card(`<button class="round merah x" id="tutup" aria-label="Tutup"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/></svg></button>
   <h3 class="big">${esc(U.LOC[n])}</h3><p class="sub-big">${esc(U.TOPIK[n])}</p>
   <div class="chiprow"><span class="tag">${U.JUMLAH[n]} soal pilihan ganda</span><span class="tag k">${esc(U.RANAH[n])}</span><span class="tag">Benar = ${U.NILAI_PER_SOAL} poin</span></div>
-  ${done ? `<div class="stars">${[1, 2, 3].map((i) => starSVG(i <= (G.aku.level[n].bintang || 0))).join('')}</div><p>Nilaimu: <b>${G.aku.level[n].nilai}</b> (${G.aku.level[n].benar} dari ${G.aku.level[n].soal} benar)${tutupSaja ? '. Pertemuan ini sudah selesai.' : ''}</p>`
+  ${done ? `<div class="stars">${[1, 2, 3].map((i) => starSVG(i <= (G.aku.level[n].bintang || 0))).join('')}</div><p>Nilaimu: <b>${G.aku.level[n].nilai}</b> (${G.aku.level[n].benar} dari ${G.aku.level[n].soal} benar)${tutupSaja ? '. Subbab ini sudah selesai.' : ''}</p>`
     : `<p class="kecil-kiri">Kamu akan belajar:</p><ul class="learn">${(U.INDIKATOR[n] || []).map((x) => `<li>${esc(x.replace(/\s*\(C\d\)\s*$/, ''))}</li>`).join('')}</ul><p class="kecil">Setiap soal hanya bisa dijawab satu kali. Kamu boleh keluar dan melanjutkan nanti.</p>`}
-  ${done && !tutupSaja ? '<p class="kecil">Mengulang akan menghapus jawaban latihan sebelumnya untuk pertemuan ini.</p>' : ''}
+  ${done && !tutupSaja ? '<p class="kecil">Mengulang akan menghapus jawaban latihan sebelumnya untuk subbab ini.</p>' : ''}
   <div class="row">${tombol}</div>`, 520);
   c.querySelector('#tutup').onclick = closeCard;
   c.querySelector('#mulai').onclick = () => { closeCard(); if (tutupSaja) return; sfx('klik'); playLevel(n); };
@@ -560,7 +560,7 @@ function lobbyCard() {
 function hasilAkhir(dariGuru) {
   G.kartu = 'akhir'; const L = G.papan; const i = L.findIndex((p) => G.aku && p.id === G.aku.id); const aku = L[i] || { skor: G.aku.skor, akurasi: 0 };
   const kelas = kelasMode();
-  const judul = dariGuru ? 'Permainan ditutup guru' : (kelas ? 'Kamu menyelesaikan semua pertemuan!' : 'Latihan selesai');
+  const judul = dariGuru ? 'Permainan ditutup guru' : (kelas ? 'Kamu menyelesaikan semua subbab!' : 'Latihan selesai');
   const perP = `<div class="saya">${[1, 2, 3].map((n) => `<div><b>${levelSelesai(n) ? G.aku.level[n].nilai : '–'}</b><span>${esc(U.LOC[n])}</span></div>`).join('')}</div>`;
   const isi = kelas
     ? `<div class="saya"><div><b>#${i + 1}</b><span>dari ${L.length} siswa</span></div><div><b>${angka(aku.skor)}</b><span>skor total</span></div><div><b>${aku.akurasi}%</b><span>jawaban benar</span></div></div>${perP}${podium(L)}${barisPapan(L, true)}
@@ -588,7 +588,7 @@ function kainSVG() {
   return s + '</svg>';
 }
 function kainCard() {
-  const c = card(`<span class="ttl">Kain batikmu</span><p>Setiap pertemuan yang selesai menambah satu motif di kainmu.</p><div class="kain-big">${kainSVG()}</div><div class="row"><button class="btn alt" id="tt">Tutup</button></div>`, 480);
+  const c = card(`<span class="ttl">Kain batikmu</span><p>Setiap subbab yang selesai menambah satu motif di kainmu.</p><div class="kain-big">${kainSVG()}</div><div class="row"><button class="btn alt" id="tt">Tutup</button></div>`, 480);
   c.querySelector('#tt').onclick = closeCard;
 }
 
@@ -600,7 +600,7 @@ function openTitle(kodeAwal) {
   const panel = $('#titlePanel'); panel.hidden = false;
   const saved = API.tersimpan();
   if (!ONLINE) {
-    panel.innerHTML = `<p class="lead">Jelajahi Kampoeng Batik Jetis dan kerjakan tiga pertemuan IPA tentang zat dan perubahannya.</p>
+    panel.innerHTML = `<p class="lead">Jelajahi Kampoeng Batik Jetis dan kerjakan tiga subbab IPA tentang zat dan perubahannya.</p>
       <div class="links">${saved ? '<button class="btn kuning" id="tLanjut">Lanjutkan</button><button class="btn alt" id="tBaru">Mulai dari awal</button>' : '<button class="btn kuning" id="tLatihan">Mulai bermain</button>'}<button class="btn alt" id="tSet">Pengaturan</button></div>
       <p class="small">Ini pratinjau satu pemain. Kode kelas dan papan peringkat bersama berjalan di versi server.</p>`;
   } else {
@@ -616,7 +616,7 @@ function openTitle(kodeAwal) {
   on('tLatihan', () => nameCard('latihan'));
   on('tSet', settingsCard);
   on('tLanjut', lanjutkan);
-  on('tBaru', () => konfirmasi('Mulai dari awal?', 'Skor dan pertemuan yang sudah selesai di perangkat ini akan dihapus.', 'Hapus dan mulai', () => { API.keluar(); openTitle(); }));
+  on('tBaru', () => konfirmasi('Mulai dari awal?', 'Skor dan subbab yang sudah selesai di perangkat ini akan dihapus.', 'Hapus dan mulai', () => { API.keluar(); openTitle(); }));
   on('tLupa', () => { API.keluar(); openTitle(); });
 }
 async function lanjutkan() {
@@ -657,7 +657,7 @@ function nameCard(mode, pin) {
   const tanyaNama = (r) => {
     const kotak = c.querySelector('#namaAda');
     kotak.hidden = false;
-    kotak.innerHTML = `<p><b>Nama "${esc(r.nama)}" sudah ada di kelas ini</b>${r.misi ? ` (sudah menyelesaikan ${r.misi} pertemuan, skor ${angka(r.skor)})` : ''}. Apakah itu kamu?</p>
+    kotak.innerHTML = `<p><b>Nama "${esc(r.nama)}" sudah ada di kelas ini</b>${r.misi ? ` (sudah menyelesaikan ${r.misi} subbab, skor ${angka(r.skor)})` : ''}. Apakah itu kamu?</p>
       <div class="row"><button class="btn" id="yaAku">Ya, itu aku. Lanjutkan</button><button class="btn alt" id="bukan">Bukan, aku siswa lain</button></div>`;
     c.querySelector('#ok').hidden = true;
     kotak.querySelector('#yaAku').onclick = () => kirimNama({ lanjut: true });
@@ -729,7 +729,7 @@ $('#btnSkip').onclick = (e) => { e.stopPropagation(); sfx('klik'); playIntro(); 
 $('#btnBack').onclick = (e) => {
   e.stopPropagation(); sfx('klik'); const mode = $('#scrScene').dataset.mode;
   if (mode !== 'level') { tulisJ(introKey(), 1); openMap(); return; }
-  const c = card(`<span class="ttl">Keluar dari pertemuan?</span><p>Jawaban yang sudah kamu kunci tetap tersimpan. Kamu bisa melanjutkan pertemuan ini dari peta.</p><div class="row"><button class="btn alt" id="tetap">Tetap main</button><button class="btn merah" id="keluar">Keluar ke peta</button></div>`, 440);
+  const c = card(`<span class="ttl">Keluar dari subbab?</span><p>Jawaban yang sudah kamu kunci tetap tersimpan. Kamu bisa melanjutkan subbab ini dari peta.</p><div class="row"><button class="btn alt" id="tetap">Tetap main</button><button class="btn merah" id="keluar">Keluar ke peta</button></div>`, 440);
   c.querySelector('#tetap').onclick = closeCard; c.querySelector('#keluar').onclick = () => { closeOptions(); $('#dlg').hidden = true; openMap(); };
 };
 $('#btnHome').onclick = () => { sfx('klik'); openTitle(); };

@@ -1,7 +1,7 @@
 {
   "name": "petualangan-batik-jetis",
   "version": "2.0.0",
-  "description": "Game edukasi IPA SMP kelas VII bertema Batik Jetis Sidoarjo: 3 pertemuan, kunci pertemuan oleh guru, kode kelas, dan papan peringkat langsung.",
+  "description": "Game edukasi IPA SMP kelas VII bertema Batik Jetis Sidoarjo: 3 subbab, kunci subbab oleh guru, kode kelas, dan papan peringkat langsung.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

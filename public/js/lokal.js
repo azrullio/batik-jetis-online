@@ -1,5 +1,5 @@
 /* Mode offline (pratinjau satu pemain): antarmuka sama dengan net.js, tapi pemeriksaan & skor berjalan di browser.
-   Pertemuan terbuka berurutan (tanpa guru) dan boleh diulang. */
+   Subbab terbuka berurutan (tanpa guru) dan boleh diulang. */
 (function () {
   'use strict';
   const K = window.KONTEN, SK = window.SKOR;

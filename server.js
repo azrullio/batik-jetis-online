@@ -1,8 +1,8 @@
 /*
  * Server Petualangan Batik Jetis (online, banyak pemain).
  * - Guru membuat kelas di /guru.html dan mendapat kode 6 digit + link + QR.
- * - Siswa bergabung dengan kode atau link dan mengerjakan Pertemuan 1, 2, 3 secara berurutan.
- * - Pertemuan 1 langsung terbuka. Pertemuan 2 dan 3 dikunci dan hanya bisa dibuka guru
+ * - Siswa bergabung dengan kode atau link dan mengerjakan Subbab 1, 2, 3 secara berurutan.
+ * - Subbab 1 langsung terbuka. Subbab 2 dan 3 dikunci dan hanya bisa dibuka guru
  *   dari dasbor, berlaku untuk semua siswa yang memakai kode kelas tersebut.
  * - Semua jawaban diperiksa dan dinilai di server, lalu papan peringkat dikirim langsung.
  */
@@ -125,9 +125,9 @@ function infoSesi(k, p) {
   return { pin: k.pin, mode: k.mode, kelasNama: k.nama, status: k.status, buka: k.buka, totalSoal: SEMUA_ID.length,
     pemain: { id: p.id, nama: p.nama, g: p.g, skor: p.skor, level: p.level, progres: progresPemain(p) }, papan: papan(k) };
 }
-/** Apakah pertemuan n boleh dikerjakan pemain p? Mengembalikan pesan bila tidak. */
+/** Apakah subbab n boleh dikerjakan pemain p? Mengembalikan pesan bila tidak. */
 function alasanTerkunci(k, p, n) {
-  if (!(n >= 1 && n <= NP)) return 'Pertemuan tidak dikenal.';
+  if (!(n >= 1 && n <= NP)) return 'Subbab tidak dikenal.';
   if (k.mode === 'kelas' && n > k.buka) return `${K.LOC[n]} masih dikunci. Tunggu gurumu membukanya.`;
   if (n > 1 && !(p.level[n - 1] && p.level[n - 1].selesai)) return `Selesaikan ${K.LOC[n - 1]} dulu.`;
   return '';
@@ -163,7 +163,7 @@ app.get('/api/kelas/:pin/hasil.csv', (req, res) => {
   if (!k || !k.hostKey || req.query.kunci !== k.hostKey) return res.status(403).send('Kunci guru salah atau kelas tidak ditemukan.');
   const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
   const kepala = ['Peringkat', 'Nama'];
-  for (let n = 1; n <= NP; n++) kepala.push('Nilai P' + n);
+  for (let n = 1; n <= NP; n++) kepala.push('Nilai Subbab ' + n);
   kepala.push('Skor total', 'Benar', 'Dijawab', 'Dari', 'Waktu menjawab (menit)');
   SEMUA_ID.forEach((id) => kepala.push('S' + K.INDEKS[id].no));
   SEMUA_ID.forEach((id) => kepala.push('J' + K.INDEKS[id].no));
@@ -242,11 +242,11 @@ io.on('connection', (socket) => {
     if (k.status !== 'selesai') { k.status = 'selesai'; k.diakhiri = Date.now(); io.to('k:' + k.pin).emit('status', k.status); siarkan(k); }
     cb({ ok: true });
   });
-  /** Guru membuka atau mengunci pertemuan. d.buka = pertemuan terakhir yang terbuka (1-3). */
+  /** Guru membuka atau mengunci subbab. d.buka = subbab terakhir yang terbuka (1-3). */
   socket.on('hostKunci', (d, cb) => {
     cb = fn(cb); const k = milikHost(d); if (!k) return cb({ ok: false });
     const b = parseInt(d.buka, 10);
-    if (!(b >= 1 && b <= NP)) return cb({ ok: false, err: 'Pertemuan tidak valid.' });
+    if (!(b >= 1 && b <= NP)) return cb({ ok: false, err: 'Subbab tidak valid.' });
     if (k.buka !== b) {
       const naik = b > k.buka; k.buka = b;
       io.to('k:' + k.pin).emit('kunci', { buka: b, naik });
@@ -282,7 +282,7 @@ io.on('connection', (socket) => {
    * Bergabung ke kelas.
    *  - token cocok      -> melanjutkan sesi lama di perangkat yang sama.
    *  - nama sudah ada   -> ditanya dulu: "Apakah ini kamu?" (d.lanjut = lanjutkan, d.baru = pemain baru).
-   *    Ini supaya siswa yang ganti perangkat / browser di pertemuan berikutnya tetap bisa melanjutkan.
+   *    Ini supaya siswa yang ganti perangkat / browser di subbab berikutnya tetap bisa melanjutkan.
    */
   socket.on('gabung', (d, cb) => {
     cb = fn(cb); d = d || {};
@@ -367,7 +367,7 @@ io.on('connection', (socket) => {
     cb = fn(cb); const { k, p } = sesiSaya();
     if (!p) return cb({ ok: false, err: 'Sesi tidak ditemukan.' });
     const n = parseInt(d && d.n, 10);
-    if (!(n >= 1 && n <= NP)) return cb({ ok: false, err: 'Pertemuan tidak valid.' });
+    if (!(n >= 1 && n <= NP)) return cb({ ok: false, err: 'Subbab tidak valid.' });
     const r = SK.selesaiLevel(p, n, K.idsLevel(n), Date.now());
     if (!r.ok) return cb(r);
     const tamat = n === NP;

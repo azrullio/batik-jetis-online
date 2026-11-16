@@ -1,4 +1,4 @@
-/* Dasbor guru: membuat kelas, membuka/mengunci pertemuan, memantau papan peringkat dan analisis soal secara langsung. */
+/* Dasbor guru: membuat kelas, membuka/mengunci subbab, memantau papan peringkat dan analisis soal secara langsung. */
 (function () {
   'use strict';
   const $ = (s) => document.querySelector(s);
@@ -7,7 +7,7 @@
   const angka = (n) => Number(n || 0).toLocaleString('id-ID');
   const kepala = window.GB.kepala;
   const KEY = 'bj.guru';
-  let U = { LOC: ['', 'Pertemuan 1', 'Pertemuan 2', 'Pertemuan 3'], TOPIK: ['', 'Wujud Zat & Model Partikel', 'Perubahan Wujud Zat', 'Perubahan Fisika dan Kimia'], JUMLAH_PERTEMUAN: 3, JUMLAH: { 1: 10, 2: 10, 3: 10 } };
+  let U = { LOC: ['', 'Subbab 1', 'Subbab 2', 'Subbab 3'], TOPIK: ['', 'Wujud Zat & Model Partikel', 'Perubahan Wujud Zat', 'Perubahan Fisika dan Kimia'], JUMLAH_PERTEMUAN: 3, JUMLAH: { 1: 10, 2: 10, 3: 10 } };
   fetch('/api/konten-umum').then((r) => r.json()).then((u) => { U = u; if (state) render(); }).catch(() => {});
   const socket = io({ transports: ['websocket', 'polling'] });
   let aktif = null; // {pin, hostKey}
@@ -32,7 +32,7 @@
     <div class="mulai-grid">
       <section class="panel">
         <h1>Buat kelas baru</h1>
-        <p class="muted" style="margin:.4em 0 1em">Satu kelas berisi 3 pertemuan, masing-masing 10 soal IPA. Pertemuan 1 langsung bisa dikerjakan. Pertemuan 2 dan 3 terkunci sampai Anda membukanya dari dasbor ini.</p>
+        <p class="muted" style="margin:.4em 0 1em">Satu kelas berisi 3 subbab, masing-masing 10 soal IPA. Subbab 1 langsung bisa dikerjakan. Subbab 2 dan 3 terkunci sampai Anda membukanya dari dasbor ini.</p>
         <form class="form" id="fBuat">
           <label class="f">Nama kelas<input class="t" id="nk" maxlength="16" placeholder="Contoh: VII A" required></label>
           <div class="row"><button class="btn besar" type="submit">Buat kelas</button></div>
@@ -46,9 +46,9 @@
         <ol class="cara" style="margin-top:10px">
           <li>Buat kelas, lalu tampilkan kode atau QR di layar kelas.</li>
           <li>Siswa memasukkan kode dan namanya, lalu Anda menekan Mulai.</li>
-          <li>Siswa mengerjakan Pertemuan 1. Nilainya muncul begitu 10 soal selesai.</li>
-          <li>Di pelajaran berikutnya, buka Pertemuan 2 (lalu Pertemuan 3) dari dasbor. Siswa masuk lagi dengan kode dan nama yang sama.</li>
-          <li>Unduh hasil (CSV) untuk nilai per pertemuan dan jawaban setiap soal.</li>
+          <li>Siswa mengerjakan Subbab 1. Nilainya muncul begitu 10 soal selesai.</li>
+          <li>Di pelajaran berikutnya, buka Subbab 2 (lalu Subbab 3) dari dasbor. Siswa masuk lagi dengan kode dan nama yang sama.</li>
+          <li>Unduh hasil (CSV) untuk nilai per subbab dan jawaban setiap soal.</li>
         </ol>
       </section>
     </div>`;
@@ -95,7 +95,7 @@
     const gulir = window.scrollY;
     app.innerHTML = `
     <div class="kepala">
-      <div><div class="row" style="margin-bottom:6px"><span class="chip ${cls}"><i></i>${lbl}</span><span class="chip">${NP} pertemuan, ${s.totalSoal} soal</span><span class="chip">Pertemuan terbuka: 1${s.buka > 1 ? '–' + s.buka : ''}</span></div><h1>${esc(s.nama)}</h1></div>
+      <div><div class="row" style="margin-bottom:6px"><span class="chip ${cls}"><i></i>${lbl}</span><span class="chip">${NP} subbab, ${s.totalSoal} soal</span><span class="chip">Subbab terbuka: 1${s.buka > 1 ? '–' + s.buka : ''}</span></div><h1>${esc(s.nama)}</h1></div>
       <div class="row sembunyi-proyektor">
         ${s.status === 'lobby' ? `<button class="btn besar" id="bMulai" ${n ? '' : 'disabled'}>Mulai</button>` : ''}
         ${s.status === 'main' ? '<button class="btn merah" id="bAkhiri">Tutup kelas</button>' : ''}
@@ -113,20 +113,20 @@
       <img class="qr" src="/api/qr/${s.pin}.png" alt="QR untuk bergabung ke kelas ${esc(s.nama)}">
     </section>` : ''}
     <section class="panel">
-      <h2>Kunci pertemuan</h2>
-      <p class="ket">Siswa mengerjakan pertemuan secara berurutan. Pertemuan yang dikunci tidak bisa dibuka siswa mana pun yang memakai kode ${s.pin}. Buka saat pelajarannya tiba.</p>
+      <h2>Kunci subbab</h2>
+      <p class="ket">Siswa mengerjakan subbab secara berurutan. Subbab yang dikunci tidak bisa dibuka siswa mana pun yang memakai kode ${s.pin}. Buka saat pelajarannya tiba.</p>
       <div class="pt-grid">${Array.from({ length: NP }, (_, i) => kartuPertemuan(i + 1, s)).join('')}</div>
     </section>
     <section class="stats">
       <div class="stat"><b>${n}</b><span>siswa bergabung, ${online} sedang online</span></div>
       <div class="stat"><b>${angka(rata)}<small> / ${NP * 100}</small></b><span>rata-rata skor total</span></div>
       <div class="stat"><b>${rataAk}%</b><span>jawaban benar dari semua soal yang dijawab</span></div>
-      <div class="stat"><b>${tamat}</b><span>menyelesaikan ketiga pertemuan</span></div>
+      <div class="stat"><b>${tamat}</b><span>menyelesaikan ketiga subbab</span></div>
     </section>
     <div class="isi">
       <section class="panel">
         <h2>Papan peringkat</h2>
-        <p class="ket">Skor total = jumlah nilai semua pertemuan (setiap jawaban benar 10 poin). Skor sama diurutkan dari yang lebih cepat menjawab. Baris merah muda menandai 3 skor terendah.</p>
+        <p class="ket">Skor total = jumlah nilai semua subbab (setiap jawaban benar 10 poin). Skor sama diurutkan dari yang lebih cepat menjawab. Baris merah muda menandai 3 skor terendah.</p>
         ${n ? podium(P) + tabel(P, s) : `<div class="kosong">Belum ada siswa. Tampilkan kode di atas supaya siswa bisa bergabung.</div>`}
       </section>
       <section class="panel sembunyi-proyektor">
@@ -137,7 +137,7 @@
     </div>
     <section class="panel sembunyi-proyektor">
       <div class="row" style="justify-content:space-between"><h2>Analisis butir soal</h2>
-        <div class="row"><label class="f-kecil">Pertemuan <select class="t kecil" id="fP"><option value="0">Semua</option>${Array.from({ length: NP }, (_, i) => `<option value="${i + 1}" ${tampil.filter === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></label>
+        <div class="row"><label class="f-kecil">Subbab <select class="t kecil" id="fP"><option value="0">Semua</option>${Array.from({ length: NP }, (_, i) => `<option value="${i + 1}" ${tampil.filter === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></label>
         <label class="f-kecil">Urutkan <select class="t kecil" id="fU"><option value="no">Nomor soal</option><option value="sulit" ${tampil.urut === 'sulit' ? 'selected' : ''}>Tersulit dulu</option></select></label></div></div>
       <p class="ket">Sebaran pilihan A–D menunjukkan pengecoh yang paling banyak dipilih siswa. Kunci jawaban ditandai hijau.</p>
       ${analisis(s.soal)}
@@ -204,7 +204,7 @@
   }
   function tabel(P, s) {
     const n = P.length, NP = s.jumlahPertemuan || 3;
-    return `<div class="tabel-wrap"><table><thead><tr><th>#</th><th>Siswa</th><th class="num">Skor</th>${Array.from({ length: NP }, (_, i) => `<th class="num">P${i + 1}</th>`).join('')}<th class="num">Benar</th><th>Status</th><th class="sembunyi-proyektor"></th></tr></thead><tbody>
+    return `<div class="tabel-wrap"><table><thead><tr><th>#</th><th>Siswa</th><th class="num">Skor</th>${Array.from({ length: NP }, (_, i) => `<th class="num">Subbab ${i + 1}</th>`).join('')}<th class="num">Benar</th><th>Status</th><th class="sembunyi-proyektor"></th></tr></thead><tbody>
     ${P.map((p, i) => {
       const bawah = n >= 6 && i >= n - 3;
       const st = p.tamat ? '<span class="dot tamat"><i></i>Selesai</span>' : p.online ? '<span class="dot on"><i></i>Online</span>' : '<span class="dot"><i></i>Offline</span>';
@@ -222,7 +222,7 @@
     if (!dijawab.length) return '<div class="kosong">Statistik muncul setelah siswa mulai menjawab.</div>';
     const urut = dijawab.filter((x) => x.persen < 100).sort((a, b) => a.persen - b.persen || a.no - b.no).slice(0, 6);
     if (!urut.length) return '<div class="kosong">Semua soal yang sudah dijawab, dijawab benar oleh semua siswa.</div>';
-    return `<ul class="soal-list">${urut.map((x) => `<li><span class="j"><span class="lvl">P${x.level} · No. ${x.no}</span> ${esc(x.judul)}</span><div class="b"><i style="width:${x.persen}%;background:${warnaPct(x.persen)}"></i></div><div class="m"><span>${x.persen}% benar</span><span>${x.benar} dari ${x.dijawab} siswa</span></div></li>`).join('')}</ul>`;
+    return `<ul class="soal-list">${urut.map((x) => `<li><span class="j"><span class="lvl">Subbab ${x.level} · No. ${x.no}</span> ${esc(x.judul)}</span><div class="b"><i style="width:${x.persen}%;background:${warnaPct(x.persen)}"></i></div><div class="m"><span>${x.persen}% benar</span><span>${x.benar} dari ${x.dijawab} siswa</span></div></li>`).join('')}</ul>`;
   }
   function analisis(S) {
     let L = S.filter((x) => !tampil.filter || x.level === tampil.filter);

@@ -3,10 +3,10 @@
  * Pakai:  node tools/uji-bot.js [jumlahBot] [urlServer]
  * Contoh: node tools/uji-bot.js 30 http://localhost:3000
  * Alur yang diuji:
- *   1. Semua bot mengerjakan Pertemuan 1.
- *   2. Bot mencoba Pertemuan 2 -> harus ditolak karena masih dikunci guru.
- *   3. Guru membuka Pertemuan 2 -> bot menerima pemberitahuan 'kunci' lalu mengerjakannya.
- *   4. Guru membuka Pertemuan 3 -> sebagian bot mengerjakannya.
+ *   1. Semua bot mengerjakan Subbab 1.
+ *   2. Bot mencoba Subbab 2 -> harus ditolak karena masih dikunci guru.
+ *   3. Guru membuka Subbab 2 -> bot menerima pemberitahuan 'kunci' lalu mengerjakannya.
+ *   4. Guru membuka Subbab 3 -> sebagian bot mengerjakannya.
  * Opsi env BIARKAN=1 membuat kelas tetap berjalan (tidak diakhiri) agar bisa dilihat di dasbor.
  */
 'use strict';
@@ -59,29 +59,29 @@ async function mainkan(bot, n) {
   console.log(`${bots.length} siswa bergabung.`);
 
   const lobi = await kirim(bots[0].s, 'ambilLevel', { n: 1 });
-  cek(!lobi.ok && lobi.status === 'lobby', 'Pertemuan 1 harus menunggu guru memulai');
+  cek(!lobi.ok && lobi.status === 'lobby', 'Subbab 1 harus menunggu guru memulai');
   await kirim(guru, 'hostMulai', host);
   const t0 = Date.now();
 
   const h1 = await Promise.all(bots.map((b) => mainkan(b, 1)));
-  cek(h1.every((r) => r.ok && r.nilai >= 0 && r.nilai <= 100), 'Semua bot menyelesaikan Pertemuan 1');
-  console.log(`Pertemuan 1 selesai. Nilai: ${h1.map((r) => r.nilai).join(', ')}`);
+  cek(h1.every((r) => r.ok && r.nilai >= 0 && r.nilai <= 100), 'Semua bot menyelesaikan Subbab 1');
+  console.log(`Subbab 1 selesai. Nilai: ${h1.map((r) => r.nilai).join(', ')}`);
 
   const terkunci = await kirim(bots[0].s, 'ambilLevel', { n: 2 });
-  cek(!terkunci.ok && terkunci.kunci, 'Pertemuan 2 harus terkunci sebelum dibuka guru');
-  console.log(`Coba Pertemuan 2 sebelum dibuka: ${terkunci.err}`);
+  cek(!terkunci.ok && terkunci.kunci, 'Subbab 2 harus terkunci sebelum dibuka guru');
+  console.log(`Coba Subbab 2 sebelum dibuka: ${terkunci.err}`);
   const ulang1 = await kirim(bots[0].s, 'ambilLevel', { n: 1 });
-  cek(!ulang1.ok, 'Pertemuan 1 tidak boleh diulang di mode kelas');
+  cek(!ulang1.ok, 'Subbab 1 tidak boleh diulang di mode kelas');
 
   await kirim(guru, 'hostKunci', Object.assign({ buka: 2 }, host));
   await tidur(300);
-  cek(bots.every((b) => b.kunci.includes(2)), 'Semua bot menerima pemberitahuan Pertemuan 2 dibuka');
+  cek(bots.every((b) => b.kunci.includes(2)), 'Semua bot menerima pemberitahuan Subbab 2 dibuka');
   const h2 = await Promise.all(bots.map((b) => mainkan(b, 2)));
-  cek(h2.every((r) => r.ok), 'Semua bot menyelesaikan Pertemuan 2');
+  cek(h2.every((r) => r.ok), 'Semua bot menyelesaikan Subbab 2');
 
   await kirim(guru, 'hostKunci', Object.assign({ buka: 3 }, host));
   const h3 = await Promise.all(bots.map((b, i) => (i % 3 === 0 ? { ok: true, lewat: true } : mainkan(b, 3))));
-  cek(h3.every((r) => r.ok), 'Bot menyelesaikan Pertemuan 3');
+  cek(h3.every((r) => r.ok), 'Bot menyelesaikan Subbab 3');
   console.log(`Semua bot selesai dalam ${((Date.now() - t0) / 1000).toFixed(1)} detik.`);
 
   const st = await kirim(guru, 'hostMasuk', host);
@@ -89,9 +89,9 @@ async function mainkan(bot, n) {
   st.kelas.papan.forEach((p) => console.log(`${String(p.rank).padStart(3)}. ${p.nama.padEnd(14)} ${String(p.skor).padStart(4)} poin  P1 ${p.nilai[1] ?? '-'}  P2 ${p.nilai[2] ?? '-'}  P3 ${p.nilai[3] ?? '-'}`));
   const urut = st.kelas.papan.every((p, i, a) => i === 0 || a[i - 1].skor > p.skor || (a[i - 1].skor === p.skor && a[i - 1].waktu <= p.waktu));
   cek(urut, 'Urutan papan peringkat');
-  cek(st.kelas.papan.every((p) => p.skor === Object.values(p.nilai).reduce((a, b) => a + b, 0)), 'Skor total = jumlah nilai pertemuan');
+  cek(st.kelas.papan.every((p) => p.skor === Object.values(p.nilai).reduce((a, b) => a + b, 0)), 'Skor total = jumlah nilai subbab');
   console.log(`\nUrutan skor menurun: ${urut ? 'YA' : 'TIDAK'}`);
-  console.log('Pertemuan:', JSON.stringify(st.kelas.pertemuan));
+  console.log('Subbab:', JSON.stringify(st.kelas.pertemuan));
   const s1 = st.kelas.soal[0];
   console.log(`Soal 1: ${s1.benar}/${s1.dijawab} benar, sebaran A-D ${s1.sebaran.join('/')}, kunci ${s1.kunci}`);
 
